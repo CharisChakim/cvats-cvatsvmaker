@@ -40,3 +40,6 @@ next-env.d.ts
 
 #log
 dev.log
+
+# claude
+CLAUDE.md
