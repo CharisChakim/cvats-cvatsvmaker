@@ -1,5 +1,6 @@
 const formatDate = date => {
     if (!date) return '';
+    if (date === 'present') return 'Present';
     const d = new Date(date);
 
     return d.toLocaleDateString(undefined, {

@@ -130,6 +130,32 @@ const MultiEditor = ({ tab }) => {
                             <div className="mt-6 grid gap-4 md:grid-cols-2 md:gap-6 animate-fade-in">
                                 {fields.map(field => {
                                     const localized = localizeField(field);
+                                    const isPresent = field.presentable && resumeData[i][field.name] === 'present';
+
+                                    if (field.presentable) {
+                                        return (
+                                            <div key={field.name}>
+                                                <Input
+                                                    {...localized}
+                                                    onChange={e => handleChange(e, i)}
+                                                    value={isPresent ? '' : (resumeData[i][field.name] || '')}
+                                                    disabled={isPresent}
+                                                />
+                                                <label className="mt-1.5 flex items-center gap-1.5 cursor-pointer select-none">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isPresent}
+                                                        onChange={e =>
+                                                            handleChange({ target: { name: field.name, value: e.target.checked ? 'present' : '' } }, i)
+                                                        }
+                                                        className="accent-primary-500"
+                                                    />
+                                                    <span className="text-xs text-gray-600 dark:text-gray-400">{t('editor.present')}</span>
+                                                </label>
+                                            </div>
+                                        );
+                                    }
+
                                     return (
                                         <Input
                                             key={field.name}

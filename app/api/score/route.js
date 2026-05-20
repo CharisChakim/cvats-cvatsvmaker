@@ -2,11 +2,15 @@ import { NextResponse } from 'next/server';
 import { callAI, extractJson } from '@/lib/callAI';
 
 const OPENROUTER_TEXT_MODELS = [
-  'openai/gpt-oss-120b:free',
   'meta-llama/llama-3.3-70b-instruct:free',
   'google/gemma-4-31b-it:free',
-  'openai/gpt-oss-20b:free',
   'qwen/qwen3-next-80b-a3b-instruct:free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'deepseek/deepseek-v4-flash:free',
+  'nousresearch/hermes-3-llama-3.1-405b:free',
+  // gpt-oss models last — tend to ignore json_object format
+  'openai/gpt-oss-120b:free',
+  'openai/gpt-oss-20b:free',
 ];
 const OPENROUTER_VISION_MODELS = [
   'google/gemma-4-31b-it:free',
@@ -118,6 +122,15 @@ export async function POST(req) {
     for (const key of ['skills', 'experience', 'education', 'keywords']) {
       if (result.breakdown?.[key]?.score != null) {
         result.breakdown[key].score = Math.min(100, Math.max(0, Math.round(result.breakdown[key].score)));
+      }
+    }
+
+    // Normalize recommendations to always be an array of strings
+    if (!Array.isArray(result.recommendations)) {
+      if (typeof result.recommendations === 'string') {
+        result.recommendations = result.recommendations.split('\n').map(s => s.trim()).filter(Boolean);
+      } else {
+        result.recommendations = [];
       }
     }
 

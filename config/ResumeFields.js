@@ -36,7 +36,7 @@ export default {
             { name: 'degree', label: 'Study Program', placeholder: 'Bachelor of Computer Science' },
             { name: 'institution', label: 'Institution', placeholder: 'University Name' },
             { name: 'start', label: 'Start Date', type: 'month', placeholder: 'MM/YYYY' },
-            { name: 'end', label: 'End Date', type: 'month', placeholder: 'MM/YYYY' },
+            { name: 'end', label: 'End Date', type: 'month', placeholder: 'MM/YYYY', presentable: true },
             { name: 'location', label: 'Location', placeholder: 'City, Country' },
             { name: 'gpa', label: 'GPA', placeholder: '3.8/4.0' },
         ],
@@ -50,7 +50,7 @@ export default {
             { name: 'company', label: 'Workplace / Company', placeholder: 'Company Name' },
             { name: 'location', label: 'Location', placeholder: 'City, Country' },
             { name: 'start', label: 'Start Date', type: 'month', placeholder: 'MM/DD/YYYY' },
-            { name: 'end', label: 'End Date', type: 'month', placeholder: 'MM/DD/YYYY' },
+            { name: 'end', label: 'End Date', type: 'month', placeholder: 'MM/DD/YYYY', presentable: true },
             {
                 name: 'description',
                 label: 'Responsibility',

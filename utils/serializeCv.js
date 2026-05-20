@@ -28,7 +28,7 @@ export function serializeCv(resume) {
         lines.push('EXPERIENCE');
         experience.forEach(exp => {
             const parts = [exp.role, exp.company, exp.location].filter(Boolean);
-            const dates = [exp.start, exp.end].filter(Boolean).join(' – ');
+            const dates = [exp.start, exp.end === 'present' ? 'Present' : exp.end].filter(Boolean).join(' – ');
             lines.push(`${parts.join(' at ')}${dates ? ` (${dates})` : ''}`);
             if (exp.description) {
                 exp.description
@@ -45,7 +45,7 @@ export function serializeCv(resume) {
         lines.push('EDUCATION');
         education.forEach(edu => {
             const parts = [edu.degree, edu.institution, edu.location].filter(Boolean);
-            const dates = [edu.start, edu.end].filter(Boolean).join(' – ');
+            const dates = [edu.start, edu.end === 'present' ? 'Present' : edu.end].filter(Boolean).join(' – ');
             const gpaStr = edu.gpa ? ` | GPA: ${edu.gpa}` : '';
             lines.push(`${parts.join(' — ')}${dates ? ` (${dates})` : ''}${gpaStr}`);
         });

@@ -138,14 +138,14 @@ const ScoreResults = ({ results, t }) => {
             </div>
 
             {/* Recommendations */}
-            {recommendations?.length > 0 && (
+            {Array.isArray(recommendations) && recommendations.length > 0 && (
                 <div className="card p-5">
                     <h3 className="flex items-center gap-2 text-sm font-semibold mb-3">
                         <FaLightbulb className="text-amber-500 dark:text-yellow-400" />
                         {t('scoring.recommendations')}
                     </h3>
                     <ul className="space-y-2.5">
-                        {recommendations.map((rec, i) => (
+                        {(Array.isArray(recommendations) ? recommendations : []).map((rec, i) => (
                             <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300">
                                 <MdCheckCircle className="mt-0.5 shrink-0 text-primary-500 dark:text-primary-400 text-base" />
                                 <span>{rec}</span>
