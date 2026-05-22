@@ -1,15 +1,6 @@
 import { NextResponse } from 'next/server';
 import { callAI } from '@/lib/callAI';
-
-const OPENROUTER_MODELS = [
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'openai/gpt-oss-120b:free',
-  'google/gemma-4-31b-it:free',
-  'openai/gpt-oss-20b:free',
-  'qwen/qwen3-next-80b-a3b-instruct:free',
-];
-const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+import { OPENROUTER_TEXT_MODELS, GROQ_TEXT_MODELS, GEMINI_MODELS } from '@/lib/aiModels';
 
 const KIND_PROMPTS = {
   summary: `Rewrite this professional summary following this exact four-part structure:
@@ -68,9 +59,9 @@ export async function POST(req) {
     try {
       refined = await callAI(messages, {
         openrouterModels: process.env.OPENROUTER_MODEL
-          ? [process.env.OPENROUTER_MODEL, ...OPENROUTER_MODELS]
-          : OPENROUTER_MODELS,
-        groqModels: GROQ_MODELS,
+          ? [process.env.OPENROUTER_MODEL, ...OPENROUTER_TEXT_MODELS]
+          : OPENROUTER_TEXT_MODELS,
+        groqModels: GROQ_TEXT_MODELS,
         geminiModels: GEMINI_MODELS,
         temperature: 0.4,
         max_tokens: 600,

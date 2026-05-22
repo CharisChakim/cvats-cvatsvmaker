@@ -1,59 +1,54 @@
 import { NextResponse } from 'next/server';
 import { callAI } from '@/lib/callAI';
+import { OPENROUTER_TEXT_MODELS, GROQ_TEXT_MODELS, GEMINI_MODELS } from '@/lib/aiModels';
 
-const OPENROUTER_MODELS = [
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'google/gemma-4-31b-it:free',
-  'qwen/qwen3-next-80b-a3b-instruct:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
-  'deepseek/deepseek-v4-flash:free',
-  'nousresearch/hermes-3-llama-3.1-405b:free',
-  'openai/gpt-oss-120b:free',
-  'openai/gpt-oss-20b:free',
-];
-const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+const PROMPT_SAFE = `You are an ATS optimization assistant. Your only task is to return the COMPLETE resume text with targeted wording improvements — nothing more.
 
-const PROMPT_SAFE = `You are a professional resume consultant specializing in ATS optimization.
-Rewrite the resume to better match the job description WITHOUT fabricating any information.
+CRITICAL: Your output MUST include EVERY section of the original resume. Do NOT omit any section, job entry, project, or skill. Do NOT summarize or condense. The output must be roughly the same length as the input.
 
-Rules:
-- Keep all facts, employers, job titles, dates, and education exactly as they appear
-- Rephrase bullet points and descriptions to naturally incorporate keywords from the job description
-- Highlight transferable skills already present but under-represented
-- Use industry-standard terminology from the job posting where it accurately reflects the candidate's experience
-- Do NOT add skills, tools, certifications, or roles not in the original
-- Do NOT add quantitative metrics that don't appear in the original
-- Preserve the exact plain-text structure: sections in ALL CAPS, bullets with •, line breaks between entries
-- Return ONLY the improved resume text — no preamble, no commentary, no markdown`;
+What to change (ONLY these):
+- Rephrase bullet points in EXPERIENCE and PROJECTS to naturally use terminology from the job description
+- Update the SUMMARY to highlight relevant keywords from the job posting
+- Do NOT change job titles, company names, dates, institutions, or project names
+- Do NOT add any new skills, certifications, roles, or metrics not already present
+- Do NOT remove or merge bullet points
 
-const PROMPT_AGGRESSIVE = `You are a professional resume consultant specializing in aggressive ATS optimization.
-Rewrite the resume to significantly better match the job description. Follow these rules exactly.
+Format rules (REQUIRED):
+- Section headings in ALL CAPS (e.g., EXPERIENCE, EDUCATION, SKILLS, PROJECTS)
+- Bullet points must use • character
+- Keep all line breaks and spacing from the original
+- Return ONLY the complete resume text — no explanations, no "Here is...", no markdown`;
 
-WHAT YOU MAY ENHANCE:
-1. SKILLS section — add plausible proficiency indicators or years of experience for existing skills (e.g. "Python" → "Python (3+ years)"). You may also add closely related skills that someone with this background would realistically have.
-2. PROJECTS section — add plausible metrics and outcomes to project descriptions (e.g. "improved load time by ~35%", "served 2,000+ users"). Enhance technical detail with realistic context.
-3. EXPERIENCE descriptions/bullets ONLY — you may add one plausible metric or achievement per bullet point ONLY if it is clearly logical and realistic for that specific job title and industry. Use approximate ranges ("~", "up to", "over") to sound authentic. If the role makes it unclear what would be realistic, leave that bullet as-is.
+const PROMPT_GAP_ADVISOR = `You are an ATS optimization assistant. Return the COMPLETE resume text applying ONLY the confirmed improvements listed below — nothing else.
 
-WHAT YOU MUST NOT CHANGE:
-- Job titles, company names, or employment dates
-- Project names and core technologies listed
-- Educational institutions, degrees, or dates
-- Certification names and issuers
-- The overall structure or order of sections
+CRITICAL: Your output MUST include EVERY section of the original resume. Do NOT omit any section, job entry, project, or skill. The output must be roughly the same length as the input.
 
-Rules:
-- Every fabricated detail must be plausible — no exaggerated or unrealistic claims
-- For experience bullets: skip any bullet where a plausible metric is not obvious for that role
-- Preserve the exact plain-text structure: sections in ALL CAPS, bullets with •, line breaks between entries
-- Return ONLY the improved resume text — no preamble, no commentary, no markdown`;
+Apply ONLY these confirmed changes:
+- Add the listed skills to the SKILLS section
+- Showcase "underrepresented skills" more prominently in experience/project bullets where relevant
+- For metric updates: find the matching bullet and incorporate the provided value naturally
+
+Do NOT:
+- Change job titles, company names, dates, institutions, or project names
+- Add any improvements beyond what is listed in CONFIRMED IMPROVEMENTS
+- Remove or merge bullet points
+
+Format rules (REQUIRED):
+- Section headings in ALL CAPS
+- Bullet points must use • character
+- Return ONLY the complete resume text — no explanations, no markdown`;
+
+function countSections(text) {
+  return (text.match(/^[A-Z][A-Z\s]{2,}$/gm) || []).length;
+}
 
 export async function POST(req) {
   try {
     const body = await req.json();
     const cvText = (body?.cvText || '').toString().trim();
     const jobText = (body?.jobText || '').toString().trim();
-    const mode = body?.mode === 'aggressive' ? 'aggressive' : 'safe';
+    const rawMode = body?.mode;
+    const mode = rawMode === 'gap-advisor' ? 'gap-advisor' : 'safe';
 
     if (!cvText || cvText.length < 50) {
       return NextResponse.json({ error: 'CV text is too short.' }, { status: 400 });
@@ -65,34 +60,82 @@ export async function POST(req) {
       return NextResponse.json({ error: 'No AI provider configured' }, { status: 500 });
     }
 
-    const systemPrompt = mode === 'aggressive' ? PROMPT_AGGRESSIVE : PROMPT_SAFE;
+    const inputSections = countSections(cvText);
+    const minLength = Math.floor(cvText.length * 0.55);
+
+    // Validate that the model returned a complete document, not just a summary
+    const validateFn = (text) => {
+      const cleaned = text.replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/i, '').trim();
+      if (cleaned.length < minLength) {
+        return `Output too short (${cleaned.length} chars, expected ≥${minLength}). Model may have truncated the resume.`;
+      }
+      if (inputSections >= 2) {
+        const outputSections = countSections(cleaned);
+        if (outputSections < inputSections) {
+          return `Missing sections: input has ${inputSections} ALL-CAPS headings, output has ${outputSections}. Sections were dropped.`;
+        }
+      }
+      return null;
+    };
+
+    let userContent;
+    if (mode === 'gap-advisor') {
+      const confirmedSkills = Array.isArray(body?.confirmedSkills) ? body.confirmedSkills : [];
+      const underrepresentedSkills = Array.isArray(body?.underrepresentedSkills) ? body.underrepresentedSkills : [];
+      const confirmedMetrics = Array.isArray(body?.confirmedMetrics) ? body.confirmedMetrics : [];
+
+      const parts = [`JOB DESCRIPTION:\n${jobText.slice(0, 3000)}\n\n---\n\nORIGINAL RESUME:\n${cvText.slice(0, 8000)}\n\n---\n\nCONFIRMED IMPROVEMENTS:`];
+      if (confirmedSkills.length > 0) {
+        parts.push(`\nSkills to add: ${confirmedSkills.join(', ')}`);
+      }
+      if (underrepresentedSkills.length > 0) {
+        parts.push(`\nSkills to strengthen in experience/projects: ${underrepresentedSkills.join(', ')}`);
+      }
+      if (confirmedMetrics.length > 0) {
+        parts.push('\nMetric updates:');
+        for (const m of confirmedMetrics) {
+          parts.push(`  - Bullet: "${m.bullet}" → add: "${m.value}"`);
+        }
+      }
+      userContent = parts.join('\n');
+    } else {
+      userContent = `JOB DESCRIPTION:\n${jobText.slice(0, 3000)}\n\n---\n\nORIGINAL RESUME (return this COMPLETE, with only targeted wording changes):\n${cvText.slice(0, 8000)}`;
+    }
+
+    const systemPrompt = mode === 'gap-advisor' ? PROMPT_GAP_ADVISOR : PROMPT_SAFE;
 
     const messages = [
       { role: 'system', content: systemPrompt },
-      {
-        role: 'user',
-        content: `JOB DESCRIPTION:\n${jobText.slice(0, 3000)}\n\n---\n\nORIGINAL RESUME:\n${cvText.slice(0, 5000)}`,
-      },
+      { role: 'user', content: userContent },
     ];
 
     let boosted;
     try {
       boosted = await callAI(messages, {
         openrouterModels: process.env.OPENROUTER_MODEL
-          ? [process.env.OPENROUTER_MODEL, ...OPENROUTER_MODELS]
-          : OPENROUTER_MODELS,
-        groqModels: GROQ_MODELS,
+          ? [process.env.OPENROUTER_MODEL, ...OPENROUTER_TEXT_MODELS]
+          : OPENROUTER_TEXT_MODELS,
+        groqModels: GROQ_TEXT_MODELS,
         geminiModels: GEMINI_MODELS,
-        temperature: mode === 'aggressive' ? 0.5 : 0.35,
-        max_tokens: 2000,
+        temperature: 0.3,
+        max_tokens: 3500,
+        validateFn,
+        timeoutMs: 60000,
       });
-    } catch {
+    } catch (err) {
+      console.error('[boost-cv] AI error:', err.message);
+      if (err.code === 'QUOTA_EXHAUSTED') {
+        return NextResponse.json(
+          { error: 'AI quota exhausted. Please try again later.', code: 'QUOTA_EXHAUSTED' },
+          { status: 429 },
+        );
+      }
       return NextResponse.json({ error: 'AI provider unavailable.' }, { status: 502 });
     }
 
     boosted = boosted.replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/i, '').trim();
 
-    if (!boosted || boosted.length < 50) {
+    if (!boosted || boosted.length < 100) {
       return NextResponse.json({ error: 'Empty response from model.' }, { status: 502 });
     }
 

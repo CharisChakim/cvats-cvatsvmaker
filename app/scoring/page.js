@@ -1,12 +1,12 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { pdfjs } from 'react-pdf';
 import Link from 'next/link';
 import { FaFilePdf, FaEdit, FaArrowLeft, FaRedo } from 'react-icons/fa';
-import { FaMagnifyingGlass, FaFileLines, FaBriefcase, FaListCheck, FaChartSimple, FaWandMagicSparkles, FaCircleCheck } from 'react-icons/fa6';
+import { FaMagnifyingGlass, FaWandMagicSparkles } from 'react-icons/fa6';
 import { CgSpinner } from 'react-icons/cg';
 import useTranslation from '@/hooks/useTranslation';
 import { serializeCv } from '@/utils/serializeCv';
@@ -15,164 +15,13 @@ import { cacheGet, cacheSet } from '@/utils/aiCache';
 import { setFullResume, saveResume } from '@/store/slices/resumeSlice';
 import JobInput from '@/components/Scoring/JobInput';
 import ScoreResults from '@/components/Scoring/ScoreResults';
+import { ScoringLoader, BoostLoader, GapAdvisorLoader } from '@/components/Scoring/ScoringLoaders';
+import MiniScoreCard from '@/components/Scoring/MiniScoreCard';
+import GapAdvisorChecklist from '@/components/Scoring/GapAdvisorChecklist';
+import CvDiff from '@/components/Scoring/CvDiff';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
-const SCORE_STEPS = [
-    { icon: FaFileLines,         key: 'scoring.loadStep1', delay: 1800 },
-    { icon: FaBriefcase,         key: 'scoring.loadStep2', delay: 1800 },
-    { icon: FaListCheck,         key: 'scoring.loadStep3', delay: 2600 },
-    { icon: FaChartSimple,       key: 'scoring.loadStep4', delay: 2600 },
-    { icon: FaWandMagicSparkles, key: 'scoring.loadStep5', delay: null  },
-];
-
-const BOOST_STEPS = [
-    { icon: FaBriefcase,         key: 'scoring.boostStep1', delay: 2000 },
-    { icon: FaListCheck,         key: 'scoring.boostStep2', delay: 2500 },
-    { icon: FaFileLines,         key: 'scoring.boostStep3', delay: 5000 },
-    { icon: FaChartSimple,       key: 'scoring.boostStep4', delay: 3000 },
-    { icon: FaCircleCheck,       key: 'scoring.boostStep5', delay: null  },
-];
-
-const StepTimeline = ({ steps, t, accentBg, accentRing, accentText }) => {
-    const [activeStep, setActiveStep] = useState(0);
-
-    useEffect(() => {
-        let elapsed = 0;
-        const timers = steps.slice(0, -1).map((s, i) => {
-            elapsed += s.delay;
-            return setTimeout(() => setActiveStep(i + 1), elapsed);
-        });
-        return () => timers.forEach(clearTimeout);
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-    return (
-        <div className="flex flex-col gap-0 w-full max-w-xs">
-            {steps.map(({ icon: Icon, key }, i) => {
-                const done    = i < activeStep;
-                const active  = i === activeStep;
-                const pending = i > activeStep;
-                const isLast  = i === steps.length - 1;
-                return (
-                    <div key={i} className="flex items-stretch gap-3">
-                        <div className="flex flex-col items-center">
-                            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all duration-500 ${
-                                done   ? 'bg-green-500 text-white' :
-                                active ? `${accentBg} text-white ring-4 ${accentRing}` :
-                                         'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
-                            }`}>
-                                {done ? <FaCircleCheck className="text-sm" /> : <Icon className="text-xs" />}
-                            </div>
-                            {!isLast && (
-                                <div className={`w-0.5 flex-1 my-1 rounded-full transition-all duration-700 ${done ? 'bg-green-400' : 'bg-gray-200 dark:bg-gray-700'}`}
-                                    style={{ minHeight: '1rem' }} />
-                            )}
-                        </div>
-                        <div className={`flex items-center gap-2 ${isLast ? 'pb-0' : 'pb-4'} transition-all duration-500 ${pending ? 'opacity-35' : 'opacity-100'}`}>
-                            <span className={`text-sm transition-all duration-500 ${
-                                done   ? 'text-green-600 dark:text-green-400' :
-                                active ? `font-semibold ${accentText}` :
-                                         'text-gray-500 dark:text-gray-400'
-                            }`}>
-                                {t(key)}
-                            </span>
-                            {active && (
-                                <span className="flex gap-0.5">
-                                    <span className="h-1 w-1 rounded-full bg-current animate-bounce [animation-delay:0ms]" />
-                                    <span className="h-1 w-1 rounded-full bg-current animate-bounce [animation-delay:120ms]" />
-                                    <span className="h-1 w-1 rounded-full bg-current animate-bounce [animation-delay:240ms]" />
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
-};
-
-const ScoringLoader = ({ t }) => (
-    <div className="flex flex-col items-center justify-center py-14 gap-8 animate-fade-in">
-        <div className="relative h-16 w-16 shrink-0">
-            <div className="absolute inset-0 rounded-full border-4 border-primary-400/20" />
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary-400 animate-spin" />
-            <FaMagnifyingGlass className="absolute inset-0 m-auto text-2xl text-primary-400" />
-        </div>
-        <p className="text-base font-semibold tracking-wide">{t('scoring.scoring')}</p>
-        <StepTimeline steps={SCORE_STEPS} t={t}
-            accentBg="bg-primary-400" accentRing="ring-primary-400/20" accentText="text-primary-500 dark:text-primary-400" />
-    </div>
-);
-
-const BoostLoader = ({ t, mode }) => (
-    <div className="flex flex-col items-center justify-center py-14 gap-8 animate-fade-in">
-        <div className="relative h-16 w-16 shrink-0">
-            <div className="absolute inset-0 rounded-full border-4 border-violet-400/20" />
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-violet-400 animate-spin" />
-            <FaWandMagicSparkles className="absolute inset-0 m-auto text-2xl text-violet-400" />
-        </div>
-        <div className="text-center">
-            <p className="text-base font-semibold tracking-wide">{t('scoring.boostingTitle')}</p>
-            <span className="mt-1.5 inline-block text-xs px-2.5 py-0.5 rounded-full bg-violet-400/10 text-violet-600 dark:text-violet-400 font-medium border border-violet-400/20">
-                {mode === 'aggressive' ? t('scoring.boostModeAggressive') : t('scoring.boostModeSafe')}
-            </span>
-        </div>
-        <StepTimeline steps={BOOST_STEPS} t={t}
-            accentBg="bg-violet-500" accentRing="ring-violet-400/20" accentText="text-violet-600 dark:text-violet-400" />
-    </div>
-);
-
-const MiniScoreCard = ({ label, results, highlight, delta }) => {
-    const score = results.overallScore;
-    const r = 36;
-    const circ = 2 * Math.PI * r;
-    const dash = (circ * score) / 100;
-    const strokeColor = score >= 75 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444';
-    const textColor   = score >= 75 ? 'text-green-500' : score >= 50 ? 'text-amber-500' : 'text-red-500';
-    const barColor    = highlight ? 'bg-violet-500' : 'bg-primary-400';
-
-    return (
-        <div className={`card p-5 flex flex-col items-center gap-4 transition-all duration-300 ${highlight ? 'ring-2 ring-violet-400 shadow-lg shadow-violet-400/10' : ''}`}>
-            <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{label}</p>
-
-            <div className="relative">
-                <svg width="96" height="96" className="-rotate-90" aria-hidden>
-                    <circle cx="48" cy="48" r={r} fill="none" stroke="currentColor" strokeWidth="6" className="text-gray-200 dark:text-gray-700" />
-                    <circle cx="48" cy="48" r={r} fill="none" strokeWidth="6" stroke={strokeColor}
-                        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={`text-2xl font-black ${textColor}`}>{score}</span>
-                </div>
-            </div>
-
-            {delta !== undefined && (
-                <div className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-                    delta > 0 ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-                    : delta < 0 ? 'bg-red-500/10 text-red-500 dark:text-red-400'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500'
-                }`}>
-                    {delta > 0 ? `+${delta} pts` : delta < 0 ? `${delta} pts` : 'No change'}
-                </div>
-            )}
-
-            <div className="w-full space-y-2.5">
-                {['skills', 'experience', 'education', 'keywords'].map(key => (
-                    <div key={key}>
-                        <div className="flex justify-between text-xs mb-0.5">
-                            <span className="text-gray-500 dark:text-gray-400 capitalize">{key}</span>
-                            <span className="font-medium tabular-nums">{results.breakdown[key].score}%</span>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
-                            <div className={`h-1.5 rounded-full transition-all duration-700 ${barColor}`}
-                                style={{ width: `${results.breakdown[key].score}%` }} />
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
 
 const ScoringPage = () => {
     const t = useTranslation();
@@ -182,7 +31,8 @@ const ScoringPage = () => {
     const fileRef = useRef(null);
 
     // Steps: 1=select cv, 2=job input, 3=scoring loader, 4=results,
-    //        5=boost loader, 6=comparison
+    //        5=boost loader (safe), 6=comparison,
+    //        7=gap analysis loader, 8=gap checklist, 9=gap apply loader
     const [step, setStep] = useState(1);
     const [cvSource, setCvSource] = useState(null);
     const [cvText, setCvText] = useState('');
@@ -199,6 +49,8 @@ const ScoringPage = () => {
     const [boostedCvText, setBoostedCvText] = useState('');
     const [boostedResults, setBoostedResults] = useState(null);
     const [applyingBoost, setApplyingBoost] = useState(false);
+    const [gapAnalysis, setGapAnalysis] = useState(null);
+    const [showDiff, setShowDiff] = useState(false);
 
     const extractTextFromPDF = async file => {
         const arrayBuffer = await file.arrayBuffer();
@@ -279,6 +131,30 @@ const ScoringPage = () => {
         }
     };
 
+    const runBoostAndScore = async (mode, body) => {
+        const boostRes = await fetch('/api/boost-cv', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const boostData = await boostRes.json();
+        if (!boostRes.ok) throw new Error(boostData.error || 'Boost failed');
+        const boosted = boostData.boostedCvText;
+        setBoostedCvText(boosted);
+        setShowDiff(false);
+
+        // Rescore boosted CV at temperature=0 for deterministic comparison
+        const scoreRes = await fetch('/api/score', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cvText: boosted, jobText: jobData.value, temperature: 0 }),
+        });
+        const scoreData = await scoreRes.json();
+        if (!scoreRes.ok) throw new Error(scoreData.error || 'Scoring failed');
+        setBoostedResults(scoreData);
+        setStep(6);
+    };
+
     const handleBoost = async (mode = 'safe') => {
         if (!cvText || !jobData || jobData.type !== 'text') return;
         setShowBoostMenu(false);
@@ -286,32 +162,54 @@ const ScoringPage = () => {
         setError('');
         setBoostedCvText('');
         setBoostedResults(null);
+
+        if (mode === 'gap-advisor') {
+            setGapAnalysis(null);
+            setStep(7);
+            try {
+                const res = await fetch('/api/analyze-gaps', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cvText, jobText: jobData.value }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    if (data.code === 'QUOTA_EXHAUSTED') { setError(t('scoring.quotaError')); setStep(4); return; }
+                    throw new Error(data.error || 'Gap analysis failed');
+                }
+                setGapAnalysis(data);
+                setStep(8);
+            } catch (err) {
+                setError(err.message || 'Failed to analyze gaps');
+                setStep(4);
+            }
+            return;
+        }
+
         setStep(5);
-
         try {
-            const boostRes = await fetch('/api/boost-cv', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cvText, jobText: jobData.value, mode }),
-            });
-            const boostData = await boostRes.json();
-            if (!boostRes.ok) throw new Error(boostData.error || 'Boost failed');
-            const boosted = boostData.boostedCvText;
-            setBoostedCvText(boosted);
-
-            const scoreRes = await fetch('/api/score', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cvText: boosted, jobText: jobData.value }),
-            });
-            const scoreData = await scoreRes.json();
-            if (!scoreRes.ok) throw new Error(scoreData.error || 'Scoring failed');
-            cacheSet(['score', boosted, jobData.value], scoreData);
-            setBoostedResults(scoreData);
-            setStep(6);
+            await runBoostAndScore(mode, { cvText, jobText: jobData.value, mode });
         } catch (err) {
             setError(err.message || 'Failed to optimize CV');
             setStep(4);
+        }
+    };
+
+    const handleApplyGap = async ({ confirmedSkills, underrepresentedSkills, confirmedMetrics }) => {
+        setError('');
+        setStep(9);
+        try {
+            await runBoostAndScore('gap-advisor', {
+                cvText,
+                jobText: jobData.value,
+                mode: 'gap-advisor',
+                confirmedSkills,
+                underrepresentedSkills,
+                confirmedMetrics,
+            });
+        } catch (err) {
+            setError(err.message || 'Failed to apply Gap Advisor');
+            setStep(8);
         }
     };
 
@@ -328,7 +226,7 @@ const ScoringPage = () => {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to apply boost');
             dispatch(setFullResume(data));
-            dispatch(saveResume()); // triggers PDF re-render in editor
+            dispatch(saveResume());
             router.push('/editor');
         } catch (err) {
             setError(err.message || 'Failed to apply boosted CV to editor');
@@ -347,6 +245,8 @@ const ScoringPage = () => {
         setEmptyCvWarning(false);
         setBoostedCvText('');
         setBoostedResults(null);
+        setGapAnalysis(null);
+        setShowDiff(false);
         // jobUrl and jobFetchedText kept so user doesn't re-fetch same URL
     };
 
@@ -369,8 +269,8 @@ const ScoringPage = () => {
         </div>
     );
 
-    const inCard = step === 1 || step === 2 || step === 3 || step === 5;
-    const isBoostPhase = step === 5 || step === 6;
+    const inCard = step === 1 || step === 2 || step === 3 || step === 5 || step === 7 || step === 9;
+    const isBoostPhase = step === 5 || step === 6 || step === 7 || step === 8 || step === 9;
 
     return (
         <div className="mx-auto max-w-screen-md px-4 pb-16 pt-8 animate-fade-in">
@@ -469,6 +369,21 @@ const ScoringPage = () => {
 
                     {step === 3 && <ScoringLoader t={t} />}
                     {step === 5 && <BoostLoader t={t} mode={boostMode} />}
+                    {step === 7 && <GapAdvisorLoader t={t} />}
+                    {step === 9 && <BoostLoader t={t} mode="gap-advisor" />}
+                </div>
+            )}
+
+            {/* Step 8: Gap Advisor checklist */}
+            {step === 8 && gapAnalysis && (
+                <div className="animate-fade-in">
+                    <GapAdvisorChecklist
+                        gaps={gapAnalysis}
+                        t={t}
+                        onApply={handleApplyGap}
+                        onBack={() => setStep(4)}
+                    />
+                    {error && <div className="mt-4"><ErrorBox msg={error} /></div>}
                 </div>
             )}
 
@@ -482,8 +397,8 @@ const ScoringPage = () => {
                             <FaArrowLeft className="text-xs" /> {t('scoring.backToEditor')}
                         </Link>
                         <div className="flex items-center gap-2">
-                            <button onClick={handleReset} className="btn text-sm gap-2 active:scale-95 transition-transform duration-100">
-                                <FaRedo className="text-xs" /> {t('scoring.scoreAgain')}
+                            <button onClick={handleScore} className="btn text-sm gap-2 active:scale-95 transition-transform duration-100">
+                                <FaRedo className="text-xs" /> Re-score
                             </button>
                             {jobData?.type === 'text' && (
                                 <button onClick={() => setShowBoostMenu(true)}
@@ -505,7 +420,7 @@ const ScoringPage = () => {
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('scoring.compareSubtitle')}</p>
                         <div className="mt-2 inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-violet-400/10 text-violet-600 dark:text-violet-400 font-medium border border-violet-400/20">
                             <FaWandMagicSparkles className="text-[10px]" />
-                            {boostMode === 'aggressive' ? t('scoring.boostModeAggressive') : t('scoring.boostModeSafe')}
+                            {boostMode === 'gap-advisor' ? t('scoring.boostModeAggressive') : t('scoring.boostModeSafe')}
                         </div>
                     </div>
 
@@ -520,6 +435,25 @@ const ScoringPage = () => {
                     </div>
 
                     {error && <div className="mt-4"><ErrorBox msg={error} /></div>}
+
+                    {/* Text diff section */}
+                    <div className="mt-5 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <button
+                            onClick={() => setShowDiff(v => !v)}
+                            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                            <span className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                                <FaWandMagicSparkles className="text-violet-500 dark:text-violet-400 text-xs" />
+                                View text changes
+                            </span>
+                            <span className="text-xs text-gray-400">{showDiff ? '▲ Hide' : '▼ Show'}</span>
+                        </button>
+                        {showDiff && (
+                            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                                <CvDiff original={cvText} boosted={boostedCvText} />
+                            </div>
+                        )}
+                    </div>
 
                     <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-between">
                         <button
@@ -562,7 +496,7 @@ const ScoringPage = () => {
                             </span>
                         </button>
                         <div className="h-px bg-gray-100 dark:bg-gray-700" />
-                        <button onClick={() => handleBoost('aggressive')}
+                        <button onClick={() => handleBoost('gap-advisor')}
                             className="w-full px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <span className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                                 {t('scoring.boostAggressiveTitle')}

@@ -1,19 +1,6 @@
 import { NextResponse } from 'next/server';
 import { callAI, extractJson } from '@/lib/callAI';
-
-const OPENROUTER_MODELS = [
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'google/gemma-4-31b-it:free',
-  'qwen/qwen3-next-80b-a3b-instruct:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
-  'deepseek/deepseek-v4-flash:free',
-  'nousresearch/hermes-3-llama-3.1-405b:free',
-  // gpt-oss models last — tend to ignore json_object format
-  'openai/gpt-oss-120b:free',
-  'openai/gpt-oss-20b:free',
-];
-const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+import { OPENROUTER_TEXT_MODELS, GROQ_TEXT_MODELS, GEMINI_MODELS } from '@/lib/aiModels';
 
 export async function POST(req) {
   try {
@@ -43,9 +30,9 @@ export async function POST(req) {
     try {
       resultText = await callAI(messages, {
         openrouterModels: process.env.OPENROUTER_MODEL
-          ? [process.env.OPENROUTER_MODEL, ...OPENROUTER_MODELS]
-          : OPENROUTER_MODELS,
-        groqModels: GROQ_MODELS,
+          ? [process.env.OPENROUTER_MODEL, ...OPENROUTER_TEXT_MODELS]
+          : OPENROUTER_TEXT_MODELS,
+        groqModels: GROQ_TEXT_MODELS,
         geminiModels: GEMINI_MODELS,
         temperature: 0.1,
         max_tokens: 4000,
