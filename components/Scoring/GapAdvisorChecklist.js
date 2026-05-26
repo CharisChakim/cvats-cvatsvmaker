@@ -109,7 +109,7 @@ const GapAdvisorChecklist = ({ gaps, t, onApply, onBack }) => {
                                     value={metricValues[item.id] || ''}
                                     onChange={e => setMetric(item.id, e.target.value)}
                                     placeholder={item.placeholder}
-                                    className="input w-full text-sm"
+                                    className="block w-full rounded-md border border-gray-300 bg-white/75 p-2 text-sm text-gray-900 shadow-md outline-none focus:border-2 focus:border-violet-500 focus:bg-white dark:border-gray-600 dark:bg-gray-700/75 dark:text-gray-100 dark:focus:bg-gray-700"
                                 />
                             </div>
                         ))}

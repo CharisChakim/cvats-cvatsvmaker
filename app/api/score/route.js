@@ -12,11 +12,19 @@ import { computeOverallScore } from '@/utils/scoringLogic';
 // Used for text jobs: AI scores all 4 dimensions; we compute overallScore ourselves.
 // Keywords is AI too — code-based matching misses stemming, synonyms, and semantic equivalents
 // (e.g. "React" vs "ReactJS", "managing" vs "management").
-const TEXT_SCHEMA = `{
+const TEXT_SCHEMA_FULL = `{
   "keywords":   { "score": <integer 0-100>, "matched": [top matched keywords], "missing": [top missing keywords — max 8] },
   "skills":     { "score": <integer 0-100>, "matched": [matched skills], "missing": [missing skills — max 8] },
   "experience": { "score": <integer 0-100>, "feedback": "<1-2 sentences>" },
   "education":  { "score": <integer 0-100>, "feedback": "<1 sentence>" },
+  "recommendations": [3-5 actionable suggestions],
+  "summary": "<2-3 sentence overall assessment>"
+}`;
+
+// Reduced schema when experience+education are already known (e.g. comparison after boost)
+const TEXT_SCHEMA_KW_SKILLS = `{
+  "keywords":   { "score": <integer 0-100>, "matched": [top matched keywords], "missing": [top missing keywords — max 8] },
+  "skills":     { "score": <integer 0-100>, "matched": [matched skills], "missing": [missing skills — max 8] },
   "recommendations": [3-5 actionable suggestions],
   "summary": "<2-3 sentence overall assessment>"
 }`;
@@ -52,6 +60,10 @@ export async function POST(req) {
     const temperature = typeof body.temperature === 'number'
       ? Math.min(1, Math.max(0, body.temperature))
       : 0.2;
+    // Allow caller to reuse specific dimension scores from a previous scoring call.
+    // Used for comparison after boost: experience and education don't change, so we
+    // pass them through to avoid AI variance between two scoring calls.
+    const reuseScores = body.reuseScores || null;
 
     if (!cvText || cvText.trim().length < 50) {
       return NextResponse.json(
@@ -121,14 +133,17 @@ export async function POST(req) {
       );
     }
 
+    const usingReuseScores = reuseScores?.experience && reuseScores?.education;
+    const schema = usingReuseScores ? TEXT_SCHEMA_KW_SKILLS : TEXT_SCHEMA_FULL;
+    const systemContent = usingReuseScores
+      ? 'You are an expert ATS resume analyzer. Evaluate keyword coverage and skills match only. Return ONLY a valid JSON object — no prose, no markdown, no code fences.'
+      : 'You are an expert ATS resume analyzer. Evaluate all dimensions: keyword coverage, skills match, experience relevance, and education fit. Return ONLY a valid JSON object — no prose, no markdown, no code fences.';
+
     const messages = [
-      {
-        role: 'system',
-        content: 'You are an expert ATS resume analyzer. Evaluate all dimensions: keyword coverage, skills match, experience relevance, and education fit. Return ONLY a valid JSON object — no prose, no markdown, no code fences.',
-      },
+      { role: 'system', content: systemContent },
       {
         role: 'user',
-        content: `Evaluate this resume against the job description. Return ONLY a JSON matching this schema:\n${TEXT_SCHEMA}\n\nRESUME:\n${cvText.slice(0, 3000)}\n\nJOB DESCRIPTION:\n${jobText.slice(0, 3000)}`,
+        content: `Evaluate this resume against the job description. Return ONLY a JSON matching this schema:\n${schema}\n\nRESUME:\n${cvText.slice(0, 3000)}\n\nJOB DESCRIPTION:\n${jobText.slice(0, 3000)}`,
       },
     ];
 
@@ -157,10 +172,11 @@ export async function POST(req) {
 
     const aiResult = extractJson(resultText);
 
-    const kwScore    = clamp(aiResult.keywords?.score    ?? 50);
-    const skillScore = clamp(aiResult.skills?.score      ?? 50);
-    const expScore   = clamp(aiResult.experience?.score  ?? 50);
-    const eduScore   = clamp(aiResult.education?.score   ?? 50);
+    const kwScore    = clamp(aiResult.keywords?.score ?? 50);
+    const skillScore = clamp(aiResult.skills?.score   ?? 50);
+    // Use reused scores if provided; otherwise use AI scores
+    const expScore   = usingReuseScores ? clamp(reuseScores.experience.score) : clamp(aiResult.experience?.score ?? 50);
+    const eduScore   = usingReuseScores ? clamp(reuseScores.education.score)  : clamp(aiResult.education?.score  ?? 50);
 
     return NextResponse.json({
       overallScore: computeOverallScore(kwScore, skillScore, expScore, eduScore),
@@ -175,8 +191,12 @@ export async function POST(req) {
           matched: Array.isArray(aiResult.skills?.matched) ? aiResult.skills.matched : [],
           missing: Array.isArray(aiResult.skills?.missing) ? aiResult.skills.missing : [],
         },
-        experience: { score: expScore, feedback: aiResult.experience?.feedback ?? '' },
-        education:  { score: eduScore, feedback: aiResult.education?.feedback  ?? '' },
+        experience: usingReuseScores
+          ? reuseScores.experience
+          : { score: expScore, feedback: aiResult.experience?.feedback ?? '' },
+        education: usingReuseScores
+          ? reuseScores.education
+          : { score: eduScore, feedback: aiResult.education?.feedback ?? '' },
       },
       recommendations: normalizeRecommendations(aiResult.recommendations),
       summary: aiResult.summary ?? '',

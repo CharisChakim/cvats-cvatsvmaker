@@ -143,11 +143,20 @@ const ScoringPage = () => {
         setBoostedCvText(boosted);
         setShowDiff(false);
 
-        // Rescore boosted CV at temperature=0 for deterministic comparison
+        // Rescore boosted CV: temperature=0 for determinism, reuse experience+education
+        // (those dimensions don't change during boost, reusing prevents AI variance)
         const scoreRes = await fetch('/api/score', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cvText: boosted, jobText: jobData.value, temperature: 0 }),
+            body: JSON.stringify({
+                cvText: boosted,
+                jobText: jobData.value,
+                temperature: 0,
+                reuseScores: {
+                    experience: results.breakdown.experience,
+                    education: results.breakdown.education,
+                },
+            }),
         });
         const scoreData = await scoreRes.json();
         if (!scoreRes.ok) throw new Error(scoreData.error || 'Scoring failed');
