@@ -19,18 +19,22 @@ Format rules (REQUIRED):
 - Keep all line breaks and spacing from the original
 - Return ONLY the complete resume text — no explanations, no "Here is...", no markdown`;
 
-const PROMPT_GAP_ADVISOR = `You are an ATS optimization assistant. Return the COMPLETE resume text applying ONLY the confirmed improvements listed below — nothing else.
+const PROMPT_GAP_ADVISOR = `You are an ATS optimization assistant. Return the COMPLETE resume text with two types of improvements applied together.
 
 CRITICAL: Your output MUST include EVERY section of the original resume. Do NOT omit any section, job entry, project, or skill. The output must be roughly the same length as the input.
 
-Apply ONLY these confirmed changes:
-- Add the listed skills to the SKILLS section
-- Showcase "underrepresented skills" more prominently in experience/project bullets where relevant
-- For metric updates: find the matching bullet and incorporate the provided value naturally
+STEP 1 — Apply confirmed gap items (apply ALL of these exactly):
+- Add the listed confirmed skills to the SKILLS section
+- Showcase "underrepresented skills" more prominently in experience/project bullets where naturally relevant
+- For metric updates: find the exact matching bullet and incorporate the provided value naturally
+
+STEP 2 — Keyword optimization (apply to all remaining content):
+- Rephrase bullet points in EXPERIENCE and PROJECTS to naturally incorporate terminology from the job description
+- Update the SUMMARY to highlight relevant job keywords
+- Do NOT add any facts, skills, tools, or roles beyond what is in STEP 1 or the original resume
 
 Do NOT:
 - Change job titles, company names, dates, institutions, or project names
-- Add any improvements beyond what is listed in CONFIRMED IMPROVEMENTS
 - Remove or merge bullet points
 
 Format rules (REQUIRED):

@@ -53,6 +53,10 @@ const GapAdvisorChecklist = ({ gaps, t, onApply, onBack }) => {
             <div>
                 <h2 className="text-xl font-bold">{t('scoring.gapChecklistTitle')}</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('scoring.gapChecklistSubtitle')}</p>
+                <div className="mt-2 flex items-start gap-2 rounded-lg border border-violet-300/40 bg-violet-50 dark:bg-violet-500/5 px-3 py-2 text-xs text-violet-700 dark:text-violet-300">
+                    <span className="shrink-0 mt-0.5">✦</span>
+                    <span>Confirmed items will be added to your CV. Your existing content will also be rephrased to better match the job keywords — no new facts added.</span>
+                </div>
             </div>
 
             {gaps.missingSkills.length > 0 && (
