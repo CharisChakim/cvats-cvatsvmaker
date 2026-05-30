@@ -109,7 +109,7 @@ const Preview = () => {
     const dispatch = useDispatch();
     const resumeData = useSelector(state => state.resume);
     const template = resumeData.template || 'classic';
-    const onePage = !!resumeData.onePage;
+    const sizeMode = resumeData.onePage === 'compact' || resumeData.onePage === 'onepage' ? resumeData.onePage : 'normal';
     const document = <Resume data={resumeData} />;
     const [instance, updateInstance] = usePDF({ document });
     const [modalOpen, setModalOpen] = useState(false);
@@ -138,7 +138,7 @@ const Preview = () => {
 
     useEffect(() => {
         updateInstance(document);
-    }, [onePage]);
+    }, [sizeMode]);
 
     return (
         <>
@@ -163,14 +163,15 @@ const Preview = () => {
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                     <span className="text-sm text-gray-600 dark:text-gray-300">{t('preview.size')}</span>
                     {[
-                        { id: false, labelKey: 'preview.normal' },
-                        { id: true, labelKey: 'preview.compact' },
+                        { id: 'normal', labelKey: 'preview.normal' },
+                        { id: 'compact', labelKey: 'preview.compact' },
+                        { id: 'onepage', labelKey: 'preview.onepage' },
                     ].map(opt => (
                         <button
-                            key={String(opt.id)}
+                            key={opt.id}
                             onClick={() => dispatch(setOnePage(opt.id))}
                             className={`rounded-md px-3 py-1 text-sm transition-all duration-150 active:scale-95 ${
-                                onePage === opt.id
+                                sizeMode === opt.id
                                     ? 'bg-primary-400 text-black'
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
                             }`}
@@ -200,7 +201,7 @@ const Preview = () => {
                     )}
                 </div>
 
-                {!instance.loading && onePage && mainNumPages > 1 && (
+                {!instance.loading && sizeMode === 'onepage' && mainNumPages > 1 && (
                     <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
                         {typeof t('preview.pageWarning') === 'function'
                             ? t('preview.pageWarning')(mainNumPages)

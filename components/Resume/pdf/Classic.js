@@ -3,7 +3,7 @@
 import { Page, Text, View, Document, Link } from '@react-pdf/renderer';
 import Section from './Section';
 import ListItem from './ListItem';
-import { normalStyles, compactStyles } from '../Styles';
+import { normalStyles, compactStyles, onePageStyles } from '../Styles';
 import formatDate from '@/utils/formatDate';
 
 const Header = ({ data, styles, compact }) => {
@@ -191,8 +191,9 @@ const Languages = ({ data, compact }) => (
 
 const Resume = ({ data }) => {
     const { contact, education, experience, projects, summary, skills, certificates, languages } = data;
-    const compact = !!data.onePage;
-    const styles = compact ? compactStyles : normalStyles;
+    const sizeMode = data.onePage;
+    const compact = sizeMode === 'compact' || sizeMode === 'onepage' || sizeMode === true;
+    const styles = sizeMode === 'onepage' ? onePageStyles : compact ? compactStyles : normalStyles;
 
     return (
         <Document language="en">

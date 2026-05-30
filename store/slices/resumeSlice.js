@@ -11,7 +11,7 @@ const defaultResume = {
     languages: [],
 
     template: 'classic',
-    onePage: false,
+    onePage: 'normal',
     saved: false,
     lang: 'en',
 };

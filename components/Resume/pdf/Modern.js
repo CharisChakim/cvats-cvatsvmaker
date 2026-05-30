@@ -9,12 +9,14 @@ const TEXT = '#1f2933';
 const MUTED = '#5b6b7a';
 const RULE = '#dde3ea';
 
-const buildStyles = (compact) =>
-    StyleSheet.create({
+const buildStyles = (sizeMode) => {
+    const compact = sizeMode === 'compact' || sizeMode === 'onepage' || sizeMode === true;
+    const onePage = sizeMode === 'onepage';
+    return StyleSheet.create({
         page: {
             backgroundColor: '#ffffff',
             color: TEXT,
-            padding: compact ? 24 : 36,
+            padding: onePage ? 16 : compact ? 24 : 36,
             fontFamily: 'Carlito',
             fontSize: compact ? 9 : 10.5,
             lineHeight: compact ? 1.25 : 1.45,
@@ -125,6 +127,7 @@ const buildStyles = (compact) =>
             color: TEXT,
         },
     });
+};
 
 const Section = ({ title, children, styles }) => (
     <View>
@@ -288,7 +291,7 @@ const Languages = ({ data, styles }) => (
 
 const Resume = ({ data }) => {
     const { contact = {}, summary, education = [], experience = [], projects = [], skills, certificates = [], languages = [] } = data;
-    const styles = buildStyles(!!data.onePage);
+    const styles = buildStyles(data.onePage);
 
     return (
         <Document language="en">

@@ -10,7 +10,7 @@ export default {
             { name: 'linkedin', label: 'Linked', placeholder: 'linkedin.com/in/johndoe' },
             { name: 'github', label: 'Github', placeholder: 'github.com/johndoe' },
             { name: 'blogs', label: 'Blogs', placeholder: 'github.com/johndoe' },
-            { name: 'twitter', label: 'Twitter', placeholder: 'github.com/johndoe' },
+            { name: 'twitter', label: 'Social Media', placeholder: 'x.com/username or instagram.com/username' },
             { name: 'portfolio', label: 'Portfolio', placeholder: 'johndoe.com' },
         ],
     },
