@@ -1,26 +1,27 @@
 'use client';
 
-const MiniScoreCard = ({ label, results, highlight, delta }) => {
+const MiniScoreCard = ({ label, results, highlight, delta, compact = false }) => {
     const score = results.overallScore;
-    const r = 36;
+    const r = compact ? 28 : 36;
     const circ = 2 * Math.PI * r;
     const dash = (circ * score) / 100;
+    const size = compact ? 72 : 96;
     const strokeColor = score >= 75 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444';
     const textColor   = score >= 75 ? 'text-green-500' : score >= 50 ? 'text-amber-500' : 'text-red-500';
     const barColor    = highlight ? 'bg-violet-500' : 'bg-primary-400';
 
-    return (
-        <div className={`card p-5 flex flex-col items-center gap-4 transition-all duration-300 ${highlight ? 'ring-2 ring-violet-400 shadow-lg shadow-violet-400/10' : ''}`}>
+    const inner = (
+        <>
             <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{label}</p>
 
             <div className="relative">
-                <svg width="96" height="96" className="-rotate-90" aria-hidden>
-                    <circle cx="48" cy="48" r={r} fill="none" stroke="currentColor" strokeWidth="6" className="text-gray-200 dark:text-gray-700" />
-                    <circle cx="48" cy="48" r={r} fill="none" strokeWidth="6" stroke={strokeColor}
+                <svg width={size} height={size} className="-rotate-90" aria-hidden>
+                    <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="currentColor" strokeWidth="6" className="text-gray-200 dark:text-gray-700" />
+                    <circle cx={size/2} cy={size/2} r={r} fill="none" strokeWidth="6" stroke={strokeColor}
                         strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={`text-2xl font-black ${textColor}`}>{score}</span>
+                    <span className={`font-black ${textColor} ${compact ? 'text-xl' : 'text-2xl'}`}>{score}</span>
                 </div>
             </div>
 
@@ -34,7 +35,7 @@ const MiniScoreCard = ({ label, results, highlight, delta }) => {
                 </div>
             )}
 
-            <div className="w-full space-y-2.5">
+            <div className="w-full space-y-2">
                 {['skills', 'experience', 'education', 'keywords'].map(key => (
                     <div key={key}>
                         <div className="flex justify-between text-xs mb-0.5">
@@ -48,6 +49,16 @@ const MiniScoreCard = ({ label, results, highlight, delta }) => {
                     </div>
                 ))}
             </div>
+        </>
+    );
+
+    if (compact) {
+        return <div className="flex flex-col items-center gap-3 transition-all duration-300">{inner}</div>;
+    }
+
+    return (
+        <div className={`card p-5 flex flex-col items-center gap-4 transition-all duration-300 ${highlight ? 'ring-2 ring-violet-400 shadow-lg shadow-violet-400/10' : ''}`}>
+            {inner}
         </div>
     );
 };

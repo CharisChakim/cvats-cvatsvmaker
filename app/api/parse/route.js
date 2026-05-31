@@ -13,7 +13,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'No AI provider configured' }, { status: 500 });
     }
 
-    const trimmedText = text.slice(0, 6000);
+    const trimmedText = text.slice(0, 12000);
 
     const messages = [
       {
@@ -22,7 +22,7 @@ export async function POST(req) {
       },
       {
         role: 'user',
-        content: `Extract this resume into exactly this JSON schema ("" for missing strings, [] for missing arrays). For experience/projects, "content" = newline-separated bullet points.\n\nSchema: {"contact":{"name":"","email":"","phone":"","location":"","designation":"","website":"","linkedin":""},"summary":{"content":""},"education":[{"institution":"","degree":"","startDate":"","endDate":"","location":""}],"experience":[{"company":"","role":"","startDate":"","endDate":"","location":"","content":""}],"projects":[{"name":"","role":"","startDate":"","endDate":"","link":"","content":""}],"skills":{"content":""},"certificates":[{"name":"","issuer":"","date":""}],"languages":[{"name":"","level":""}]}\n\nResume:\n${trimmedText}`,
+        content: `Extract this resume into exactly this JSON schema ("" for missing strings, [] for missing arrays).\n\nRules:\n- experience/projects "content": newline-separated bullet points, NO leading bullet characters (strip any •, -, * from the start of each line). Plain text only.\n- skills "content": comma-separated list of individual skill names. Multi-word skills stay as one item (e.g. "Python, SQL, Data Visualization, Power BI, Machine Learning"). No bullets, no numbering.\n\nSchema: {"contact":{"name":"","email":"","phone":"","location":"","designation":"","website":"","linkedin":""},"summary":{"content":""},"education":[{"institution":"","degree":"","startDate":"","endDate":"","location":""}],"experience":[{"company":"","role":"","startDate":"","endDate":"","location":"","content":""}],"projects":[{"name":"","role":"","startDate":"","endDate":"","link":"","content":""}],"skills":{"content":""},"certificates":[{"name":"","issuer":"","date":""}],"languages":[{"name":"","level":""}]}\n\nResume:\n${trimmedText}`,
       },
     ];
 
@@ -35,7 +35,7 @@ export async function POST(req) {
         groqModels: GROQ_TEXT_MODELS,
         geminiModels: GEMINI_MODELS,
         temperature: 0.1,
-        max_tokens: 4000,
+        max_tokens: 8000,
         response_format: { type: 'json_object' },
       });
     } catch {
@@ -51,6 +51,16 @@ export async function POST(req) {
     console.error('Error parsing resume:', error);
     return NextResponse.json({ error: error.message || 'Failed to parse resume' }, { status: 500 });
   }
+}
+
+// Strip leading bullet/dash characters from each line of experience/project content.
+// Guards against AI including "• " or "- " prefixes despite being told not to.
+function cleanBulletLines(content) {
+  return (content || '')
+    .split('\n')
+    .map(line => line.replace(/^[\s•·\-*–]+/, '').trim())
+    .filter(Boolean)
+    .join('\n');
 }
 
 function mapToAppSchema(p) {
@@ -85,13 +95,13 @@ function mapToAppSchema(p) {
     location: e.location || '',
     start: e.startDate || '',
     end: e.endDate || '',
-    description: e.content || '',
+    description: cleanBulletLines(e.content),
   }));
 
   const projects = (p.projects || []).map(pr => ({
     title: pr.name || '',
     url: pr.link || '',
-    description: pr.content || '',
+    description: cleanBulletLines(pr.content),
   }));
 
   const skillItems = (p.skills?.content || '')

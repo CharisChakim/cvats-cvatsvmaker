@@ -15,18 +15,19 @@ What to change (ONLY these):
 
 Format rules (REQUIRED):
 - Section headings in ALL CAPS (e.g., EXPERIENCE, EDUCATION, SKILLS, PROJECTS)
-- Bullet points must use • character
+- CRITICAL: Do NOT rename any section heading. If the original says "SKILLS", keep it as "SKILLS" — not "Technical Skills", "Core Competencies", or any other variant. Preserve every heading exactly as written.
+- SKILLS content: keep all skills as a comma-separated list on one line (e.g. "Python, SQL, Data Visualization, Power BI"). Do NOT convert to bullet points or space-separated.
+- Bullet points must use • character (only in EXPERIENCE and PROJECTS)
 - Keep all line breaks and spacing from the original
 - Return ONLY the complete resume text — no explanations, no "Here is...", no markdown`;
 
 const PROMPT_GAP_ADVISOR = `You are an ATS optimization assistant. Return the COMPLETE resume text with two types of improvements applied together.
 
-CRITICAL: Your output MUST include EVERY section of the original resume. Do NOT omit any section, job entry, project, or skill. The output must be roughly the same length as the input.
+CRITICAL: Your output MUST include EVERY section of the original resume. Do NOT omit any section, job entry, project, or skill. The output must be roughly the same length as the input (or slightly longer if new experience bullets are added).
 
 STEP 1 — Apply confirmed gap items (apply ALL of these exactly):
-- Add the listed confirmed skills to the SKILLS section
-- Showcase "underrepresented skills" more prominently in experience/project bullets where naturally relevant
-- For metric updates: find the exact matching bullet and incorporate the provided value naturally
+- If confirmed skills are listed: add them to the SKILLS section, preserving all existing skills
+- If hidden experience details are provided: for each area, find the most relevant job or project entry and add a new bullet point that incorporates the user's provided details naturally and truthfully
 
 STEP 2 — Keyword optimization (apply to all remaining content):
 - Rephrase bullet points in EXPERIENCE and PROJECTS to naturally incorporate terminology from the job description
@@ -39,7 +40,9 @@ Do NOT:
 
 Format rules (REQUIRED):
 - Section headings in ALL CAPS
-- Bullet points must use • character
+- CRITICAL: Do NOT rename any section heading. If the original says "SKILLS", keep it as "SKILLS" — not "Technical Skills", "Core Competencies", or any other variant. Preserve every heading exactly as written.
+- SKILLS content: keep all skills as a comma-separated list on one line (e.g. "Python, SQL, Data Visualization, Power BI"). Do NOT convert to bullet points or space-separated.
+- Bullet points must use • character (only in EXPERIENCE and PROJECTS)
 - Return ONLY the complete resume text — no explanations, no markdown`;
 
 function countSections(text) {
@@ -65,7 +68,8 @@ export async function POST(req) {
     }
 
     const inputSections = countSections(cvText);
-    const minLength = Math.floor(cvText.length * 0.55);
+    const minLength = Math.floor(cvText.length * 0.70);
+    const hasSkillsSection = /^SKILLS?\s*$/im.test(cvText);
 
     // Validate that the model returned a complete document, not just a summary
     const validateFn = (text) => {
@@ -79,27 +83,29 @@ export async function POST(req) {
           return `Missing sections: input has ${inputSections} ALL-CAPS headings, output has ${outputSections}. Sections were dropped.`;
         }
       }
+      if (hasSkillsSection && !/^SKILLS?\s*$/im.test(cleaned)) {
+        return 'SKILLS section heading was renamed or removed. Preserve all section headings exactly as in the original.';
+      }
       return null;
     };
 
     let userContent;
     if (mode === 'gap-advisor') {
       const confirmedSkills = Array.isArray(body?.confirmedSkills) ? body.confirmedSkills : [];
-      const underrepresentedSkills = Array.isArray(body?.underrepresentedSkills) ? body.underrepresentedSkills : [];
-      const confirmedMetrics = Array.isArray(body?.confirmedMetrics) ? body.confirmedMetrics : [];
+      const hiddenExperiences = Array.isArray(body?.hiddenExperiences) ? body.hiddenExperiences : [];
 
       const parts = [`JOB DESCRIPTION:\n${jobText.slice(0, 3000)}\n\n---\n\nORIGINAL RESUME:\n${cvText.slice(0, 8000)}\n\n---\n\nCONFIRMED IMPROVEMENTS:`];
       if (confirmedSkills.length > 0) {
-        parts.push(`\nSkills to add: ${confirmedSkills.join(', ')}`);
+        parts.push(`\nSkills to add to SKILLS section: ${confirmedSkills.join(', ')}`);
       }
-      if (underrepresentedSkills.length > 0) {
-        parts.push(`\nSkills to strengthen in experience/projects: ${underrepresentedSkills.join(', ')}`);
-      }
-      if (confirmedMetrics.length > 0) {
-        parts.push('\nMetric updates:');
-        for (const m of confirmedMetrics) {
-          parts.push(`  - Bullet: "${m.bullet}" → add: "${m.value}"`);
+      if (hiddenExperiences.length > 0) {
+        parts.push('\nHidden experience to incorporate as new bullet points:');
+        for (const exp of hiddenExperiences) {
+          parts.push(`  - Area: "${exp.area}" — User says: "${exp.details}"`);
         }
+      }
+      if (confirmedSkills.length === 0 && hiddenExperiences.length === 0) {
+        parts.push('\n(No confirmed additions — apply keyword optimization only)');
       }
       userContent = parts.join('\n');
     } else {

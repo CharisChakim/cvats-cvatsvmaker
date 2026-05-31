@@ -18,7 +18,7 @@ import ScoreResults from '@/components/Scoring/ScoreResults';
 import { ScoringLoader, BoostLoader, GapAdvisorLoader } from '@/components/Scoring/ScoringLoaders';
 import MiniScoreCard from '@/components/Scoring/MiniScoreCard';
 import GapAdvisorChecklist from '@/components/Scoring/GapAdvisorChecklist';
-import CvDiff from '@/components/Scoring/CvDiff';
+import SideBySideDiff from '@/components/Scoring/SideBySideDiff';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
@@ -51,6 +51,7 @@ const ScoringPage = () => {
     const [applyingBoost, setApplyingBoost] = useState(false);
     const [gapAnalysis, setGapAnalysis] = useState(null);
     const [showDiff, setShowDiff] = useState(false);
+    const [selectedOption, setSelectedOption] = useState('boosted'); // 'original' | 'boosted'
 
     const extractTextFromPDF = async file => {
         const arrayBuffer = await file.arrayBuffer();
@@ -67,6 +68,11 @@ const ScoringPage = () => {
     const handleSelectCurrent = () => {
         const serialized = serializeCv(resumeData);
         if (!serialized || serialized.trim().length < 30) { setEmptyCvWarning(true); return; }
+        const hasSubstance =
+            (resumeData.experience?.length > 0) ||
+            (resumeData.skills?.items?.length > 0) ||
+            (resumeData.education?.length > 0);
+        if (!hasSubstance) { setEmptyCvWarning(true); return; }
         setEmptyCvWarning(false);
         setCvText(serialized);
         setCvSource('current');
@@ -158,8 +164,24 @@ const ScoringPage = () => {
                 },
             }),
         });
-        const scoreData = await scoreRes.json();
+        let scoreData = await scoreRes.json();
         if (!scoreRes.ok) throw new Error(scoreData.error || 'Scoring failed');
+
+        // In gap-advisor mode, skills score should never decrease — any drop is an AI
+        // reformatting artifact (e.g. slightly changed skill names breaking substring match).
+        // Patch: floor skills at original score, recalculate overall.
+        if (mode === 'gap-advisor' && scoreData.breakdown?.skills?.score < results.breakdown.skills.score) {
+            const k  = scoreData.breakdown.keywords.score;
+            const e  = results.breakdown.experience.score;
+            const s  = results.breakdown.skills.score;
+            const ed = results.breakdown.education.score;
+            scoreData = {
+                ...scoreData,
+                breakdown: { ...scoreData.breakdown, skills: results.breakdown.skills },
+                overallScore: Math.min(100, Math.max(0, Math.round(k * 0.30 + e * 0.30 + s * 0.25 + ed * 0.15))),
+            };
+        }
+
         setBoostedResults(scoreData);
         setStep(6);
     };
@@ -171,6 +193,7 @@ const ScoringPage = () => {
         setError('');
         setBoostedCvText('');
         setBoostedResults(null);
+        setSelectedOption('boosted');
 
         if (mode === 'gap-advisor') {
             setGapAnalysis(null);
@@ -204,7 +227,7 @@ const ScoringPage = () => {
         }
     };
 
-    const handleApplyGap = async ({ confirmedSkills, underrepresentedSkills, confirmedMetrics }) => {
+    const handleApplyGap = async ({ confirmedSkills, hiddenExperiences }) => {
         setError('');
         setStep(9);
         try {
@@ -213,8 +236,7 @@ const ScoringPage = () => {
                 jobText: jobData.value,
                 mode: 'gap-advisor',
                 confirmedSkills,
-                underrepresentedSkills,
-                confirmedMetrics,
+                hiddenExperiences,
             });
         } catch (err) {
             setError(err.message || 'Failed to apply Gap Advisor');
@@ -234,6 +256,13 @@ const ScoringPage = () => {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to apply boost');
+            const hasMinimumContent =
+                (data.experience?.length > 0) ||
+                (data.skills?.items?.length > 0) ||
+                (data.education?.length > 0);
+            if (!hasMinimumContent) {
+                throw new Error(t('scoring.boostParseIncomplete'));
+            }
             dispatch(setFullResume(data));
             dispatch(saveResume());
             router.push('/editor');
@@ -433,51 +462,117 @@ const ScoringPage = () => {
                         </div>
                     </div>
 
-                    <div className="grid sm:grid-cols-2 gap-4">
-                        <MiniScoreCard label={t('scoring.originalCv')} results={results} />
-                        <MiniScoreCard
-                            label={t('scoring.boostedCv')}
-                            results={boostedResults}
-                            highlight
-                            delta={boostedResults.overallScore - results.overallScore}
-                        />
+                    {/* Info banner: no change from Gap Advisor */}
+                    {boostMode === 'gap-advisor' && boostedResults.overallScore === results.overallScore && (
+                        <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-amber-300/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-300">
+                            <span className="shrink-0 mt-0.5">ℹ</span>
+                            <span>{t('scoring.gapNoChange')}</span>
+                        </div>
+                    )}
+
+                    {/* Option A / Option B selector cards */}
+                    <div className="grid sm:grid-cols-2 gap-3">
+                        {/* Option A — Original */}
+                        <button
+                            type="button"
+                            onClick={() => setSelectedOption('original')}
+                            className={`text-left rounded-xl border-2 p-4 transition-all duration-150 active:scale-[0.98] ${
+                                selectedOption === 'original'
+                                    ? 'border-primary-400 bg-primary-50 dark:bg-primary-400/5'
+                                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600'
+                            }`}
+                        >
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                                    {t('scoring.optionA')}
+                                </span>
+                                <span className={`h-4 w-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    selectedOption === 'original'
+                                        ? 'border-primary-400 bg-primary-400'
+                                        : 'border-gray-300 dark:border-gray-600'
+                                }`}>
+                                    {selectedOption === 'original' && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                                </span>
+                            </div>
+                            <MiniScoreCard label={t('scoring.originalCv')} results={results} compact />
+                        </button>
+
+                        {/* Option B — Boosted */}
+                        <button
+                            type="button"
+                            onClick={() => setSelectedOption('boosted')}
+                            className={`text-left rounded-xl border-2 p-4 transition-all duration-150 active:scale-[0.98] ${
+                                selectedOption === 'boosted'
+                                    ? 'border-violet-400 bg-violet-50 dark:bg-violet-500/5'
+                                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600'
+                            }`}
+                        >
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="text-xs font-bold uppercase tracking-wider text-violet-400 dark:text-violet-500">
+                                    {t('scoring.optionB')}
+                                </span>
+                                <span className={`h-4 w-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                    selectedOption === 'boosted'
+                                        ? 'border-violet-400 bg-violet-400'
+                                        : 'border-gray-300 dark:border-gray-600'
+                                }`}>
+                                    {selectedOption === 'boosted' && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                                </span>
+                            </div>
+                            <MiniScoreCard
+                                label={t('scoring.boostedCv')}
+                                results={boostedResults}
+                                highlight
+                                delta={boostedResults.overallScore - results.overallScore}
+                                compact
+                            />
+                        </button>
                     </div>
 
                     {error && <div className="mt-4"><ErrorBox msg={error} /></div>}
 
                     {/* Text diff section */}
-                    <div className="mt-5 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className="mt-4 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
                         <button
                             onClick={() => setShowDiff(v => !v)}
                             className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
                         >
                             <span className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                                 <FaWandMagicSparkles className="text-violet-500 dark:text-violet-400 text-xs" />
-                                View text changes
+                                {t('scoring.viewChanges')}
                             </span>
                             <span className="text-xs text-gray-400">{showDiff ? '▲ Hide' : '▼ Show'}</span>
                         </button>
                         {showDiff && (
                             <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-                                <CvDiff original={cvText} boosted={boostedCvText} />
+                                <SideBySideDiff original={cvText} boosted={boostedCvText} />
                             </div>
                         )}
                     </div>
 
-                    <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-between">
+                    {/* Apply button */}
+                    <div className="mt-5">
                         <button
-                            onClick={() => { setBoostedCvText(''); setBoostedResults(null); setStep(4); }}
-                            className="btn text-sm gap-2 justify-center active:scale-95 transition-transform duration-100"
-                        >
-                            <FaArrowLeft className="text-xs" /> {t('scoring.keepOriginal')}
-                        </button>
-                        <button
-                            onClick={handleAcceptBoost}
+                            onClick={() => {
+                                if (selectedOption === 'original') {
+                                    setBoostedCvText(''); setBoostedResults(null); setStep(4);
+                                } else {
+                                    handleAcceptBoost();
+                                }
+                            }}
                             disabled={applyingBoost}
-                            className="flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 active:scale-95 transition-all duration-100 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+                            className={`w-full flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-all duration-150 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed shadow-sm ${
+                                selectedOption === 'boosted'
+                                    ? 'text-white bg-violet-600 hover:bg-violet-700'
+                                    : 'text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
+                            }`}
                         >
-                            {applyingBoost ? <CgSpinner className="animate-spin" /> : <FaWandMagicSparkles />}
-                            <span>{applyingBoost ? t('scoring.applyingBoost') : t('scoring.useBoosted')}</span>
+                            {applyingBoost
+                                ? <><CgSpinner className="animate-spin" /> <span>{t('scoring.applyingBoost')}</span></>
+                                : selectedOption === 'boosted'
+                                    ? <><FaWandMagicSparkles /> <span>{t('scoring.applyOptionB')}</span></>
+                                    : <><FaArrowLeft className="text-xs" /> <span>{t('scoring.applyOptionA')}</span></>
+                            }
                         </button>
                     </div>
                 </div>

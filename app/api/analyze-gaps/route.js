@@ -2,31 +2,31 @@ import { NextResponse } from 'next/server';
 import { callAI, extractJson } from '@/lib/callAI';
 import { OPENROUTER_TEXT_MODELS, GROQ_TEXT_MODELS, GEMINI_MODELS } from '@/lib/aiModels';
 
-const SYSTEM_PROMPT = `You are a resume gap analyst. Compare the candidate's resume against the job description and identify specific, actionable gaps.
+const SYSTEM_PROMPT = `You are a resume gap analyst. Your job is to find gaps between what the job requires and what the candidate's CV shows.
 
 Return a JSON object with this exact structure:
 {
-  "missingSkills": [
-    { "skill": "Docker", "reason": "Required in JD, not in CV" }
-  ],
-  "underrepresentedSkills": [
-    { "skill": "Python", "reason": "Listed in skills but not demonstrated in experience" }
-  ],
-  "metricOpportunities": [
+  "experienceQuestions": [
     {
       "id": "0",
-      "bullet": "Built a responsive web application",
-      "question": "How many users did this serve, or what improvement did it bring?",
-      "placeholder": "e.g. served 500+ users, reduced load time by 40%"
+      "area": "Supply Chain Management",
+      "question": "The job involves supply chain processes. Have you worked in this area — even informally or as part of a broader role — in a way not currently shown in your CV?",
+      "placeholder": "e.g. I coordinated with vendors and tracked inventory for a regional warehouse team..."
+    }
+  ],
+  "confirmableSkills": [
+    {
+      "skill": "Docker",
+      "reason": "Required in JD but not listed in your CV"
     }
   ]
 }
 
 Rules:
-- missingSkills: only skills/tools explicitly mentioned in the JD that are absent from the CV. Maximum 8 items. Focus on hard skills, tools, and technologies — not soft skills.
-- underrepresentedSkills: skills listed in the CV's SKILLS section but not demonstrated in experience/projects. Maximum 5 items.
-- metricOpportunities: experience or project bullet points that would be stronger with a metric. Pick only the 3-5 most impactful ones. The "bullet" field must contain the exact original text of the bullet point (shortened to ~80 chars if needed).
-- If a category has no items, return an empty array for it.
+- experienceQuestions: Identify 2–4 experience AREAS the job explicitly or implicitly requires that are not demonstrated in the CV. Ask whether the candidate has relevant experience they haven't mentioned. Keep questions open and conversational — the candidate might have done this in a different context or role. Do NOT ask about specific tools or software (save those for confirmableSkills).
+- confirmableSkills: List hard skills, tools, and technologies explicitly mentioned in the JD that do not appear anywhere in the CV. Maximum 6 items. Focus on actionable tools the candidate might have used but not listed (e.g. Docker, Tableau, Salesforce). Do NOT include soft skills.
+- You MUST find gaps if the CV score is low. Be thorough — a candidate with a poor match needs actionable questions and skills to confirm.
+- If a category truly has no items, return an empty array. But always try to find at least something for a CV that doesn't fully match the JD.
 - Return ONLY the JSON object, no explanation.`;
 
 export async function POST(req) {
@@ -61,8 +61,8 @@ export async function POST(req) {
           : OPENROUTER_TEXT_MODELS,
         groqModels: GROQ_TEXT_MODELS,
         geminiModels: GEMINI_MODELS,
-        temperature: 0.2,
-        max_tokens: 1000,
+        temperature: 0.3,
+        max_tokens: 1200,
         response_format: { type: 'json_object' },
         validateFn: text => { try { extractJson(text); return null; } catch (e) { return e.message; } },
         timeoutMs: 30000,
@@ -87,9 +87,8 @@ export async function POST(req) {
     }
 
     const gaps = {
-      missingSkills: Array.isArray(result.missingSkills) ? result.missingSkills.slice(0, 8) : [],
-      underrepresentedSkills: Array.isArray(result.underrepresentedSkills) ? result.underrepresentedSkills.slice(0, 5) : [],
-      metricOpportunities: Array.isArray(result.metricOpportunities) ? result.metricOpportunities.slice(0, 5) : [],
+      experienceQuestions: Array.isArray(result.experienceQuestions) ? result.experienceQuestions.slice(0, 4) : [],
+      confirmableSkills: Array.isArray(result.confirmableSkills) ? result.confirmableSkills.slice(0, 6) : [],
     };
 
     return NextResponse.json(gaps);
