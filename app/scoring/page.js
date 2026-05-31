@@ -227,7 +227,7 @@ const ScoringPage = () => {
         }
     };
 
-    const handleApplyGap = async ({ confirmedSkills, hiddenExperiences }) => {
+    const handleApplyGap = async ({ confirmedSkills, hiddenExperiences, confirmedKeywords, confirmedCerts }) => {
         setError('');
         setStep(9);
         try {
@@ -237,6 +237,8 @@ const ScoringPage = () => {
                 mode: 'gap-advisor',
                 confirmedSkills,
                 hiddenExperiences,
+                confirmedKeywords,
+                confirmedCerts,
             });
         } catch (err) {
             setError(err.message || 'Failed to apply Gap Advisor');

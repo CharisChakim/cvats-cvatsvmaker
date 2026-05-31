@@ -200,11 +200,11 @@ const SideBySideDiff = ({ original, boosted }) => {
                         const { left: lToks, right: rToks } = wordDiff(row.left ?? '', row.right ?? '');
                         return (
                             <div key={idx} className="grid grid-cols-2 border-t border-gray-100 dark:border-gray-800 first:border-t-0">
-                                <div className="px-3 py-0.5 whitespace-pre-wrap break-all min-h-[1.4rem] bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300">
-                                    <InlineTokens tokens={lToks} highlightClass="bg-red-200 dark:bg-red-700/60 rounded-sm" />
+                                <div className="px-3 py-0.5 whitespace-pre-wrap break-all min-h-[1.4rem] bg-red-100 dark:bg-red-900/30 text-red-900 dark:text-red-300">
+                                    <InlineTokens tokens={lToks} highlightClass="bg-red-400/80 dark:bg-red-500/70 rounded-sm" />
                                 </div>
-                                <div className="px-3 py-0.5 whitespace-pre-wrap break-all min-h-[1.4rem] border-l border-gray-100 dark:border-gray-800 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300">
-                                    <InlineTokens tokens={rToks} highlightClass="bg-green-200 dark:bg-green-700/60 rounded-sm" />
+                                <div className="px-3 py-0.5 whitespace-pre-wrap break-all min-h-[1.4rem] border-l border-gray-100 dark:border-gray-800 bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-300">
+                                    <InlineTokens tokens={rToks} highlightClass="bg-green-400/80 dark:bg-green-500/70 rounded-sm" />
                                 </div>
                             </div>
                         );
@@ -214,10 +214,10 @@ const SideBySideDiff = ({ original, boosted }) => {
                     const isRemove = row.type === 'remove';
                     return (
                         <div key={idx} className="grid grid-cols-2 border-t border-gray-100 dark:border-gray-800 first:border-t-0">
-                            <div className={`px-3 py-0.5 whitespace-pre-wrap break-all min-h-[1.4rem] ${isRemove ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300' : 'text-gray-300 dark:text-gray-600'}`}>
+                            <div className={`px-3 py-0.5 whitespace-pre-wrap break-all min-h-[1.4rem] ${isRemove ? 'bg-red-100 dark:bg-red-900/30 text-red-900 dark:text-red-300' : 'text-gray-300 dark:text-gray-600'}`}>
                                 {isRemove ? row.left : ''}
                             </div>
-                            <div className={`px-3 py-0.5 whitespace-pre-wrap break-all min-h-[1.4rem] border-l border-gray-100 dark:border-gray-800 ${!isRemove ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300' : 'text-gray-300 dark:text-gray-600'}`}>
+                            <div className={`px-3 py-0.5 whitespace-pre-wrap break-all min-h-[1.4rem] border-l border-gray-100 dark:border-gray-800 ${!isRemove ? 'bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-300' : 'text-gray-300 dark:text-gray-600'}`}>
                                 {!isRemove ? row.right : ''}
                             </div>
                         </div>

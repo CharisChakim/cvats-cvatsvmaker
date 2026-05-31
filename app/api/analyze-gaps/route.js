@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { callAI, extractJson } from '@/lib/callAI';
 import { OPENROUTER_TEXT_MODELS, GROQ_TEXT_MODELS, GEMINI_MODELS } from '@/lib/aiModels';
 
-const SYSTEM_PROMPT = `You are a resume gap analyst. Your job is to find gaps between what the job requires and what the candidate's CV shows.
+const SYSTEM_PROMPT = `You are a resume-to-job-description gap analyst. Your ONLY job is to identify what the job description requires that is COMPLETELY ABSENT from the candidate's CV.
+
+CRITICAL RULE: All gaps must be derived from JOB DESCRIPTION requirements only. Do NOT flag anything that appears anywhere in the CV — even if a skill appears in experience bullets but not in the SKILLS section, that is an internal CV issue, not a gap. For every item ask yourself: "Does the JD require this AND is it completely absent from the entire CV text?" If not, exclude it.
 
 Return a JSON object with this exact structure:
 {
@@ -10,24 +12,43 @@ Return a JSON object with this exact structure:
     {
       "id": "0",
       "area": "Supply Chain Management",
-      "question": "The job involves supply chain processes. Have you worked in this area — even informally or as part of a broader role — in a way not currently shown in your CV?",
+      "question": "The job requires supply chain experience. Have you worked in this area in a way not shown in your CV?",
       "placeholder": "e.g. I coordinated with vendors and tracked inventory for a regional warehouse team..."
     }
   ],
   "confirmableSkills": [
     {
       "skill": "Docker",
-      "reason": "Required in JD but not listed in your CV"
+      "reason": "Required in JD but not found anywhere in your CV"
+    }
+  ],
+  "keywordGaps": [
+    {
+      "keyword": "Agile methodology",
+      "context": "Mentioned repeatedly in JD as the primary work framework",
+      "question": "The JD emphasizes Agile methodology. Does this term or approach apply to your work experience?",
+      "placeholder": "e.g. I work in 2-week sprints, run daily standups, and manage a Jira board..."
+    }
+  ],
+  "certificationGaps": [
+    {
+      "cert": "AWS Certified Developer",
+      "reason": "Required/preferred in JD but not listed in your CV"
     }
   ]
 }
 
-Rules:
-- experienceQuestions: Identify 2–4 experience AREAS the job explicitly or implicitly requires that are not demonstrated in the CV. Ask whether the candidate has relevant experience they haven't mentioned. Keep questions open and conversational — the candidate might have done this in a different context or role. Do NOT ask about specific tools or software (save those for confirmableSkills).
-- confirmableSkills: List hard skills, tools, and technologies explicitly mentioned in the JD that do not appear anywhere in the CV. Maximum 6 items. Focus on actionable tools the candidate might have used but not listed (e.g. Docker, Tableau, Salesforce). Do NOT include soft skills.
-- You MUST find gaps if the CV score is low. Be thorough — a candidate with a poor match needs actionable questions and skills to confirm.
-- If a category truly has no items, return an empty array. But always try to find at least something for a CV that doesn't fully match the JD.
-- Return ONLY the JSON object, no explanation.`;
+Rules per category (quality over quantity — strict limits):
+- experienceQuestions (max 2): Experience AREAS the JD explicitly requires that are not demonstrated ANYWHERE in the CV. Ask conversationally. Do NOT ask about specific tools (those go to confirmableSkills).
+- confirmableSkills (max 4): Hard skills, tools, or technologies explicitly named in the JD that do not appear ANYWHERE in the CV text. No soft skills.
+- keywordGaps (max 3): Key terms or phrases the JD uses repeatedly that are completely absent from the CV. Focus on role-specific language that improves keyword match (e.g. methodology names, domain terms). Do NOT duplicate items from confirmableSkills.
+- certificationGaps (max 2): Specific certifications, licenses, or degrees the JD explicitly requires or prefers that are not in the CV. Only include if directly stated in the JD.
+
+IMPORTANT:
+- If an item appears ANYWHERE in the CV — do NOT include it in any category
+- Return empty array [] for any category with nothing clearly missing
+- Only include items with clear JD evidence AND complete CV absence
+- Return ONLY the JSON object, no explanation`;
 
 export async function POST(req) {
   try {
@@ -62,7 +83,7 @@ export async function POST(req) {
         groqModels: GROQ_TEXT_MODELS,
         geminiModels: GEMINI_MODELS,
         temperature: 0.3,
-        max_tokens: 1200,
+        max_tokens: 1800,
         response_format: { type: 'json_object' },
         validateFn: text => { try { extractJson(text); return null; } catch (e) { return e.message; } },
         timeoutMs: 30000,
@@ -87,8 +108,10 @@ export async function POST(req) {
     }
 
     const gaps = {
-      experienceQuestions: Array.isArray(result.experienceQuestions) ? result.experienceQuestions.slice(0, 4) : [],
-      confirmableSkills: Array.isArray(result.confirmableSkills) ? result.confirmableSkills.slice(0, 6) : [],
+      experienceQuestions: Array.isArray(result.experienceQuestions) ? result.experienceQuestions.slice(0, 2) : [],
+      confirmableSkills: Array.isArray(result.confirmableSkills) ? result.confirmableSkills.slice(0, 4) : [],
+      keywordGaps: Array.isArray(result.keywordGaps) ? result.keywordGaps.slice(0, 3) : [],
+      certificationGaps: Array.isArray(result.certificationGaps) ? result.certificationGaps.slice(0, 2) : [],
     };
 
     return NextResponse.json(gaps);

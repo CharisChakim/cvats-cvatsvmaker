@@ -6,6 +6,8 @@ import { FaCircleCheck, FaArrowLeft, FaWandMagicSparkles, FaChevronDown } from '
 const GapAdvisorChecklist = ({ gaps, t, onApply, onBack }) => {
     const [checkedSkills, setCheckedSkills] = useState({});
     const [expAnswers, setExpAnswers] = useState({}); // { [id]: { enabled: bool, details: string } }
+    const [keywordAnswers, setKeywordAnswers] = useState({}); // { [keyword]: { enabled: bool, details: string } }
+    const [checkedCerts, setCheckedCerts] = useState({});
 
     const toggleSkill = (skill) => {
         setCheckedSkills(prev => ({ ...prev, [skill]: !prev[skill] }));
@@ -25,9 +27,32 @@ const GapAdvisorChecklist = ({ gaps, t, onApply, onBack }) => {
         }));
     };
 
+    const toggleKeyword = (keyword) => {
+        setKeywordAnswers(prev => ({
+            ...prev,
+            [keyword]: { enabled: !prev[keyword]?.enabled, details: prev[keyword]?.details || '' },
+        }));
+    };
+
+    const setKeywordDetail = (keyword, value) => {
+        setKeywordAnswers(prev => ({
+            ...prev,
+            [keyword]: { ...prev[keyword], details: value },
+        }));
+    };
+
+    const toggleCert = (cert) => {
+        setCheckedCerts(prev => ({ ...prev, [cert]: !prev[cert] }));
+    };
+
+    const keywordGaps = gaps.keywordGaps || [];
+    const certificationGaps = gaps.certificationGaps || [];
+
     const hasAnyItem =
         gaps.experienceQuestions.length > 0 ||
-        gaps.confirmableSkills.length > 0;
+        gaps.confirmableSkills.length > 0 ||
+        keywordGaps.length > 0 ||
+        certificationGaps.length > 0;
 
     const handleApply = () => {
         const confirmedSkills = gaps.confirmableSkills
@@ -38,7 +63,15 @@ const GapAdvisorChecklist = ({ gaps, t, onApply, onBack }) => {
             .filter(item => expAnswers[item.id]?.enabled && expAnswers[item.id]?.details?.trim())
             .map(item => ({ area: item.area, details: expAnswers[item.id].details.trim() }));
 
-        onApply({ confirmedSkills, hiddenExperiences });
+        const confirmedKeywords = keywordGaps
+            .filter(item => keywordAnswers[item.keyword]?.enabled && keywordAnswers[item.keyword]?.details?.trim())
+            .map(item => ({ keyword: item.keyword, details: keywordAnswers[item.keyword].details.trim() }));
+
+        const confirmedCerts = certificationGaps
+            .filter(item => checkedCerts[item.cert])
+            .map(item => item.cert);
+
+        onApply({ confirmedSkills, hiddenExperiences, confirmedKeywords, confirmedCerts });
     };
 
     if (!hasAnyItem) {
@@ -128,6 +161,83 @@ const GapAdvisorChecklist = ({ gaps, t, onApply, onBack }) => {
                                 <div>
                                     <span className={`text-sm font-medium transition-colors ${checkedSkills[item.skill] ? 'text-violet-600 dark:text-violet-400' : 'text-gray-800 dark:text-gray-200'}`}>
                                         {item.skill}
+                                    </span>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{item.reason}</p>
+                                </div>
+                            </label>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Section 3: Keyword Gaps */}
+            {keywordGaps.length > 0 && (
+                <section className="card p-5 space-y-4">
+                    <div>
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('scoring.gapKeywordsTitle')}</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('scoring.gapKeywordsDesc')}</p>
+                    </div>
+                    <div className="space-y-4">
+                        {keywordGaps.map(item => {
+                            const isOn = !!keywordAnswers[item.keyword]?.enabled;
+                            return (
+                                <div key={item.keyword} className={`rounded-lg border transition-colors ${isOn ? 'border-blue-400/40 bg-blue-50/50 dark:bg-blue-500/5' : 'border-gray-200 dark:border-gray-700'}`}>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleKeyword(item.keyword)}
+                                        className="w-full flex items-start justify-between gap-3 p-3 text-left"
+                                    >
+                                        <div className="flex-1">
+                                            <span className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">{item.keyword}</span>
+                                            <p className="text-sm text-gray-700 dark:text-gray-300 mt-0.5">{item.question}</p>
+                                        </div>
+                                        <div className={`shrink-0 mt-0.5 flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                                            isOn
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                                        }`}>
+                                            {isOn ? 'Yes' : 'No'}
+                                            <FaChevronDown className={`text-[10px] transition-transform ${isOn ? 'rotate-180' : ''}`} />
+                                        </div>
+                                    </button>
+                                    {isOn && (
+                                        <div className="px-3 pb-3">
+                                            <textarea
+                                                rows={3}
+                                                value={keywordAnswers[item.keyword]?.details || ''}
+                                                onChange={e => setKeywordDetail(item.keyword, e.target.value)}
+                                                placeholder={item.placeholder}
+                                                className="block w-full rounded-md border border-gray-300 bg-white/75 p-2 text-sm text-gray-900 shadow-sm outline-none focus:border-2 focus:border-blue-500 focus:bg-white dark:border-gray-600 dark:bg-gray-700/75 dark:text-gray-100 dark:focus:bg-gray-700 resize-none"
+                                            />
+                                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tell us briefly — AI will weave this terminology into your CV naturally.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </section>
+            )}
+
+            {/* Section 4: Certification Gaps */}
+            {certificationGaps.length > 0 && (
+                <section className="card p-5 space-y-3">
+                    <div>
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('scoring.gapCertsTitle')}</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('scoring.gapCertsDesc')}</p>
+                    </div>
+                    <div className="space-y-2">
+                        {certificationGaps.map(item => (
+                            <label key={item.cert} className="flex items-start gap-3 cursor-pointer group">
+                                <input
+                                    type="checkbox"
+                                    checked={!!checkedCerts[item.cert]}
+                                    onChange={() => toggleCert(item.cert)}
+                                    className="mt-0.5 h-4 w-4 rounded accent-violet-500 cursor-pointer shrink-0"
+                                />
+                                <div>
+                                    <span className={`text-sm font-medium transition-colors ${checkedCerts[item.cert] ? 'text-violet-600 dark:text-violet-400' : 'text-gray-800 dark:text-gray-200'}`}>
+                                        {item.cert}
                                     </span>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">{item.reason}</p>
                                 </div>

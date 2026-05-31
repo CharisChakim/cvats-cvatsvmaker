@@ -100,8 +100,8 @@ const CvDiff = ({ original, boosted }) => {
                             </button>
                         );
                     }
-                    const bg = entry.type === 'add'    ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300'
-                             : entry.type === 'remove' ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 line-through opacity-70'
+                    const bg = entry.type === 'add'    ? 'bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-300'
+                             : entry.type === 'remove' ? 'bg-red-100 dark:bg-red-900/30 text-red-900 dark:text-red-300 line-through'
                              : 'text-gray-500 dark:text-gray-500';
                     const prefix = entry.type === 'add' ? '+' : entry.type === 'remove' ? '−' : ' ';
                     return (

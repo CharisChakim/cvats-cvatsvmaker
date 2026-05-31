@@ -21,13 +21,15 @@ Format rules (REQUIRED):
 - Keep all line breaks and spacing from the original
 - Return ONLY the complete resume text — no explanations, no "Here is...", no markdown`;
 
-const PROMPT_GAP_ADVISOR = `You are an ATS optimization assistant. Return the COMPLETE resume text with two types of improvements applied together.
+const PROMPT_GAP_ADVISOR = `You are an ATS optimization assistant. Return the COMPLETE resume text with improvements applied.
 
-CRITICAL: Your output MUST include EVERY section of the original resume. Do NOT omit any section, job entry, project, or skill. The output must be roughly the same length as the input (or slightly longer if new experience bullets are added).
+CRITICAL: Your output MUST include EVERY section of the original resume. Do NOT omit any section, job entry, project, or skill. The output must be roughly the same length as the input (or slightly longer if new content is added).
 
 STEP 1 — Apply confirmed gap items (apply ALL of these exactly):
 - If confirmed skills are listed: add them to the SKILLS section, preserving all existing skills
 - If hidden experience details are provided: for each area, find the most relevant job or project entry and add a new bullet point that incorporates the user's provided details naturally and truthfully
+- If confirmed keywords are provided: for each keyword, naturally incorporate the user's description into the SUMMARY and/or the most relevant experience bullet points using the exact JD terminology
+- If confirmed certifications are listed: add them to the EDUCATION section or create a CERTIFICATIONS section if none exists
 
 STEP 2 — Keyword optimization (apply to all remaining content):
 - Rephrase bullet points in EXPERIENCE and PROJECTS to naturally incorporate terminology from the job description
@@ -93,6 +95,8 @@ export async function POST(req) {
     if (mode === 'gap-advisor') {
       const confirmedSkills = Array.isArray(body?.confirmedSkills) ? body.confirmedSkills : [];
       const hiddenExperiences = Array.isArray(body?.hiddenExperiences) ? body.hiddenExperiences : [];
+      const confirmedKeywords = Array.isArray(body?.confirmedKeywords) ? body.confirmedKeywords : [];
+      const confirmedCerts = Array.isArray(body?.confirmedCerts) ? body.confirmedCerts : [];
 
       const parts = [`JOB DESCRIPTION:\n${jobText.slice(0, 3000)}\n\n---\n\nORIGINAL RESUME:\n${cvText.slice(0, 8000)}\n\n---\n\nCONFIRMED IMPROVEMENTS:`];
       if (confirmedSkills.length > 0) {
@@ -104,7 +108,17 @@ export async function POST(req) {
           parts.push(`  - Area: "${exp.area}" — User says: "${exp.details}"`);
         }
       }
-      if (confirmedSkills.length === 0 && hiddenExperiences.length === 0) {
+      if (confirmedKeywords.length > 0) {
+        parts.push('\nKeyword context to weave into CV naturally:');
+        for (const kw of confirmedKeywords) {
+          parts.push(`  - Keyword: "${kw.keyword}" — User says: "${kw.details}"`);
+        }
+      }
+      if (confirmedCerts.length > 0) {
+        parts.push(`\nCertifications to add to EDUCATION or CERTIFICATIONS section: ${confirmedCerts.join(', ')}`);
+      }
+      const hasAnyConfirmed = confirmedSkills.length > 0 || hiddenExperiences.length > 0 || confirmedKeywords.length > 0 || confirmedCerts.length > 0;
+      if (!hasAnyConfirmed) {
         parts.push('\n(No confirmed additions — apply keyword optimization only)');
       }
       userContent = parts.join('\n');
