@@ -44,3 +44,7 @@ dev.log
 # claude
 CLAUDE.md
 CVATS_NOTES.md
+
+# local scripts
+generate-sample.js
+run-cvats-demo.js
