@@ -30,13 +30,21 @@
 
 ## 📸 Screenshots
 
-> Note: these predate the current Paper & Ink redesign and still show the previous theme.
+**Landing** — the pitch, and a live look at what the scorer produces.
 
-<img src="./public/screenshots/1.png" width="75%" />
-<br/><br/>
-<img src="./public/screenshots/2.png" width="75%" />
-<br/><br/>
-<img src="./public/screenshots/3.jpg" width="75%" />
+<img src="./public/screenshots/1.png" width="80%" alt="C-VATS landing page" />
+
+**Editor** — fields on the left, the real PDF rendering live on the right, with template, density, and font controls.
+
+<img src="./public/screenshots/2.png" width="80%" alt="C-VATS editor with live PDF preview" />
+
+**Scoring** — bring the job posting as text, a URL, or a screenshot.
+
+<img src="./public/screenshots/3.png" width="80%" alt="C-VATS scoring step with a job description entered" />
+
+**Dark mode** — the same editor on ink instead of paper.
+
+<img src="./public/screenshots/4.png" width="80%" alt="C-VATS editor in dark mode" />
 
 ---
 
