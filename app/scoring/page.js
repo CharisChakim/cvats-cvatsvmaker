@@ -3,7 +3,6 @@
 import { useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useRouter } from 'next/navigation';
-import { pdfjs } from 'react-pdf';
 import Link from 'next/link';
 import { FaFilePdf, FaEdit, FaArrowLeft, FaRedo } from 'react-icons/fa';
 import { FaMagnifyingGlass, FaWandMagicSparkles } from 'react-icons/fa6';
@@ -11,17 +10,16 @@ import { CgSpinner } from 'react-icons/cg';
 import useTranslation from '@/hooks/useTranslation';
 import { serializeCv } from '@/utils/serializeCv';
 import { cleanPdfText } from '@/utils/cleanPdfText';
+import { extractTextFromPDF } from '@/utils/extractTextFromPdf';
 import { cacheGet, cacheSet } from '@/utils/aiCache';
 import { setFullResume, saveResume } from '@/store/slices/resumeSlice';
 import JobInput from '@/components/Scoring/JobInput';
 import ScoreResults from '@/components/Scoring/ScoreResults';
 import { ScoringLoader, BoostLoader, GapAdvisorLoader } from '@/components/Scoring/ScoringLoaders';
-import MiniScoreCard from '@/components/Scoring/MiniScoreCard';
 import GapAdvisorChecklist from '@/components/Scoring/GapAdvisorChecklist';
-import SideBySideDiff from '@/components/Scoring/SideBySideDiff';
-
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-
+import ErrorBox from '@/components/Scoring/ErrorBox';
+import ComparisonStep from '@/components/Scoring/ComparisonStep';
+import BoostMenuPopup from '@/components/Scoring/BoostMenuPopup';
 
 const ScoringPage = () => {
     const t = useTranslation();
@@ -52,18 +50,6 @@ const ScoringPage = () => {
     const [gapAnalysis, setGapAnalysis] = useState(null);
     const [showDiff, setShowDiff] = useState(false);
     const [selectedOption, setSelectedOption] = useState('boosted'); // 'original' | 'boosted'
-
-    const extractTextFromPDF = async file => {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-        let fullText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            fullText += textContent.items.map(item => item.str).join(' ') + '\n';
-        }
-        return fullText;
-    };
 
     const handleSelectCurrent = () => {
         const serialized = serializeCv(resumeData);
@@ -103,12 +89,14 @@ const ScoringPage = () => {
         }
     };
 
-    const handleScore = async () => {
+    // force=true skips the cache — otherwise "Re-score" would replay the cached
+    // result for the same CV + job and appear to do nothing.
+    const handleScore = async ({ force = false } = {}) => {
         if (!jobData) { setError(t('scoring.emptyJobError')); return; }
         if (!cvText || cvText.trim().length < 50) { setError(t('scoring.emptyCvError')); return; }
         setError('');
 
-        if (jobData.type === 'text') {
+        if (!force && jobData.type === 'text') {
             const cached = cacheGet(['score', cvText, jobData.value]);
             if (cached) { setResults(cached); setStep(4); return; }
         }
@@ -290,13 +278,6 @@ const ScoringPage = () => {
         // jobUrl and jobFetchedText kept so user doesn't re-fetch same URL
     };
 
-    const ErrorBox = ({ msg }) =>
-        msg ? (
-            <p className="rounded-md border border-red-300 bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
-                {msg}
-            </p>
-        ) : null;
-
     const StepDots = () => (
         <div className="mb-6 flex items-center justify-center gap-2">
             {[1, 2, 3].map(s => (
@@ -343,18 +324,18 @@ const ScoringPage = () => {
                             <ErrorBox msg={error} />
                             <div className="mt-4 grid sm:grid-cols-2 gap-4">
                                 <button onClick={handleSelectCurrent}
-                                    className="flex flex-col items-center gap-4 rounded-xl border-2 border-gray-200 bg-gray-50 p-8 text-center transition-all duration-200 hover:border-primary-400 hover:bg-primary-50 active:scale-[0.98] group dark:border-gray-600 dark:bg-gray-800/50 dark:hover:border-primary-400 dark:hover:bg-primary-400/5">
-                                    <FaEdit className="text-4xl text-primary-400 group-hover:scale-110 transition-transform duration-200" />
+                                    className="lift group flex flex-col items-center gap-4 rounded-2xl border border-transparent bg-white p-8 text-center shadow-layered hover:border-primary-400/40 dark:bg-gray-800/50">
+                                    <FaEdit className="text-4xl text-primary-400 transition-transform duration-500 ease-spring group-hover:scale-110" />
                                     <div>
                                         <p className="font-semibold">{t('scoring.useCurrent')}</p>
                                         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('scoring.useCurrentDesc')}</p>
                                     </div>
                                 </button>
                                 <button onClick={handleSelectUpload} disabled={extractingPdf}
-                                    className="flex flex-col items-center gap-4 rounded-xl border-2 border-gray-200 bg-gray-50 p-8 text-center transition-all duration-200 hover:border-primary-400 hover:bg-primary-50 active:scale-[0.98] group dark:border-gray-600 dark:bg-gray-800/50 dark:hover:border-primary-400 dark:hover:bg-primary-400/5 disabled:opacity-60 disabled:cursor-not-allowed">
+                                    className="lift group flex flex-col items-center gap-4 rounded-2xl border border-transparent bg-white p-8 text-center shadow-layered hover:border-primary-400/40 dark:bg-gray-800/50 disabled:opacity-60 disabled:cursor-not-allowed">
                                     {extractingPdf
                                         ? <CgSpinner className="text-4xl text-primary-400 animate-spin" />
-                                        : <FaFilePdf className="text-4xl text-primary-400 group-hover:scale-110 transition-transform duration-200" />
+                                        : <FaFilePdf className="text-4xl text-primary-400 transition-transform duration-500 ease-spring group-hover:scale-110" />
                                     }
                                     <div>
                                         <p className="font-semibold">{t('scoring.uploadNew')}</p>
@@ -386,7 +367,7 @@ const ScoringPage = () => {
                                 <span className="text-primary-700 dark:text-primary-300 font-medium truncate">
                                     {cvSource === 'current' ? t('scoring.useCurrent') : uploadedFileName}
                                 </span>
-                                <button onClick={() => setStep(1)} className="ml-auto shrink-0 text-xs text-primary-500 hover:underline dark:text-primary-400">
+                                <button onClick={() => { setError(''); setStep(1); }} className="ml-auto shrink-0 text-xs text-primary-500 hover:underline dark:text-primary-400">
                                     {t('scoring.back')}
                                 </button>
                             </div>
@@ -396,10 +377,10 @@ const ScoringPage = () => {
                                 onUrlFetched={(url, text) => { setJobUrl(url); setJobFetchedText(text); }} />
                             {error && <div className="mt-3"><ErrorBox msg={error} /></div>}
                             <div className="mt-6 flex justify-between">
-                                <button onClick={() => setStep(1)} className="btn text-sm gap-2 active:scale-95 transition-transform duration-100">
+                                <button onClick={() => { setError(''); setStep(1); }} className="btn text-sm gap-2">
                                     <FaArrowLeft className="text-xs" /> {t('scoring.back')}
                                 </button>
-                                <button onClick={handleScore} disabled={!jobData}
+                                <button onClick={() => handleScore()} disabled={!jobData}
                                     className="btn-filled text-sm gap-2 active:scale-95 transition-transform duration-100 disabled:opacity-60 disabled:cursor-not-allowed">
                                     {t('scoring.scoreBtn')} <FaMagnifyingGlass />
                                 </button>
@@ -421,7 +402,7 @@ const ScoringPage = () => {
                         gaps={gapAnalysis}
                         t={t}
                         onApply={handleApplyGap}
-                        onBack={() => setStep(4)}
+                        onBack={() => { setError(''); setStep(4); }}
                     />
                     {error && <div className="mt-4"><ErrorBox msg={error} /></div>}
                 </div>
@@ -437,8 +418,8 @@ const ScoringPage = () => {
                             <FaArrowLeft className="text-xs" /> {t('scoring.backToEditor')}
                         </Link>
                         <div className="flex items-center gap-2">
-                            <button onClick={handleScore} className="btn text-sm gap-2 active:scale-95 transition-transform duration-100">
-                                <FaRedo className="text-xs" /> Re-score
+                            <button onClick={() => handleScore({ force: true })} className="btn text-sm gap-2">
+                                <FaRedo className="text-xs" /> {t('scoring.rescore')}
                             </button>
                             {jobData?.type === 'text' && (
                                 <button onClick={() => setShowBoostMenu(true)}
@@ -454,165 +435,27 @@ const ScoringPage = () => {
 
             {/* Step 6: Comparison */}
             {step === 6 && results && boostedResults && (
-                <div className="animate-fade-in">
-                    <div className="mb-5">
-                        <h2 className="text-xl font-bold">{t('scoring.compareTitle')}</h2>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('scoring.compareSubtitle')}</p>
-                        <div className="mt-2 inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-violet-400/10 text-violet-600 dark:text-violet-400 font-medium border border-violet-400/20">
-                            <FaWandMagicSparkles className="text-[10px]" />
-                            {boostMode === 'gap-advisor' ? t('scoring.boostModeAggressive') : t('scoring.boostModeSafe')}
-                        </div>
-                    </div>
-
-                    {/* Info banner: no change from Gap Advisor */}
-                    {boostMode === 'gap-advisor' && boostedResults.overallScore === results.overallScore && (
-                        <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-amber-300/50 bg-amber-50 dark:bg-amber-500/10 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-300">
-                            <span className="shrink-0 mt-0.5">ℹ</span>
-                            <span>{t('scoring.gapNoChange')}</span>
-                        </div>
-                    )}
-
-                    {/* Option A / Option B selector cards */}
-                    <div className="grid sm:grid-cols-2 gap-3">
-                        {/* Option A — Original */}
-                        <button
-                            type="button"
-                            onClick={() => setSelectedOption('original')}
-                            className={`text-left rounded-xl border-2 p-4 transition-all duration-150 active:scale-[0.98] ${
-                                selectedOption === 'original'
-                                    ? 'border-primary-400 bg-primary-50 dark:bg-primary-400/5'
-                                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between mb-3">
-                                <span className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                                    {t('scoring.optionA')}
-                                </span>
-                                <span className={`h-4 w-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                    selectedOption === 'original'
-                                        ? 'border-primary-400 bg-primary-400'
-                                        : 'border-gray-300 dark:border-gray-600'
-                                }`}>
-                                    {selectedOption === 'original' && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
-                                </span>
-                            </div>
-                            <MiniScoreCard label={t('scoring.originalCv')} results={results} compact />
-                        </button>
-
-                        {/* Option B — Boosted */}
-                        <button
-                            type="button"
-                            onClick={() => setSelectedOption('boosted')}
-                            className={`text-left rounded-xl border-2 p-4 transition-all duration-150 active:scale-[0.98] ${
-                                selectedOption === 'boosted'
-                                    ? 'border-violet-400 bg-violet-50 dark:bg-violet-500/5'
-                                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between mb-3">
-                                <span className="text-xs font-bold uppercase tracking-wider text-violet-400 dark:text-violet-500">
-                                    {t('scoring.optionB')}
-                                </span>
-                                <span className={`h-4 w-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                    selectedOption === 'boosted'
-                                        ? 'border-violet-400 bg-violet-400'
-                                        : 'border-gray-300 dark:border-gray-600'
-                                }`}>
-                                    {selectedOption === 'boosted' && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
-                                </span>
-                            </div>
-                            <MiniScoreCard
-                                label={t('scoring.boostedCv')}
-                                results={boostedResults}
-                                highlight
-                                delta={boostedResults.overallScore - results.overallScore}
-                                compact
-                            />
-                        </button>
-                    </div>
-
-                    {error && <div className="mt-4"><ErrorBox msg={error} /></div>}
-
-                    {/* Text diff section */}
-                    <div className="mt-4 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                        <button
-                            onClick={() => setShowDiff(v => !v)}
-                            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-                        >
-                            <span className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                                <FaWandMagicSparkles className="text-violet-500 dark:text-violet-400 text-xs" />
-                                {t('scoring.viewChanges')}
-                            </span>
-                            <span className="text-xs text-gray-400">{showDiff ? '▲ Hide' : '▼ Show'}</span>
-                        </button>
-                        {showDiff && (
-                            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-                                <SideBySideDiff original={cvText} boosted={boostedCvText} />
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Apply button */}
-                    <div className="mt-5">
-                        <button
-                            onClick={() => {
-                                if (selectedOption === 'original') {
-                                    setBoostedCvText(''); setBoostedResults(null); setStep(4);
-                                } else {
-                                    handleAcceptBoost();
-                                }
-                            }}
-                            disabled={applyingBoost}
-                            className={`w-full flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-all duration-150 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed shadow-sm ${
-                                selectedOption === 'boosted'
-                                    ? 'text-white bg-violet-600 hover:bg-violet-700'
-                                    : 'text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
-                            }`}
-                        >
-                            {applyingBoost
-                                ? <><CgSpinner className="animate-spin" /> <span>{t('scoring.applyingBoost')}</span></>
-                                : selectedOption === 'boosted'
-                                    ? <><FaWandMagicSparkles /> <span>{t('scoring.applyOptionB')}</span></>
-                                    : <><FaArrowLeft className="text-xs" /> <span>{t('scoring.applyOptionA')}</span></>
-                            }
-                        </button>
-                    </div>
-                </div>
+                <ComparisonStep
+                    t={t}
+                    results={results}
+                    boostedResults={boostedResults}
+                    boostMode={boostMode}
+                    selectedOption={selectedOption}
+                    onSelectOption={setSelectedOption}
+                    error={error}
+                    showDiff={showDiff}
+                    onToggleDiff={() => setShowDiff(v => !v)}
+                    cvText={cvText}
+                    boostedCvText={boostedCvText}
+                    applyingBoost={applyingBoost}
+                    onApplyOriginal={() => { setError(''); setBoostedCvText(''); setBoostedResults(null); setStep(4); }}
+                    onApplyBoosted={handleAcceptBoost}
+                />
             )}
 
             {/* Boost mode popup */}
             {showBoostMenu && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-                    onClick={() => setShowBoostMenu(false)}>
-                    <div className="w-72 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800"
-                        onClick={e => e.stopPropagation()}>
-                        <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-                            <FaWandMagicSparkles className="text-violet-500 text-sm" />
-                            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                                {t('scoring.boostMenuTitle')}
-                            </p>
-                        </div>
-                        <button onClick={() => handleBoost('safe')}
-                            className="w-full px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                            <span className="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                {t('scoring.boostSafeTitle')}
-                            </span>
-                            <span className="text-xs text-gray-400 dark:text-gray-500">
-                                {t('scoring.boostSafeDesc')}
-                            </span>
-                        </button>
-                        <div className="h-px bg-gray-100 dark:bg-gray-700" />
-                        <button onClick={() => handleBoost('gap-advisor')}
-                            className="w-full px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                            <span className="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                {t('scoring.boostAggressiveTitle')}
-                            </span>
-                            <span className="text-xs text-gray-400 dark:text-gray-500">
-                                {t('scoring.boostAggressiveDesc')}
-                            </span>
-                        </button>
-                    </div>
-                </div>
+                <BoostMenuPopup t={t} onClose={() => setShowBoostMenu(false)} onSelect={handleBoost} />
             )}
         </div>
     );

@@ -37,10 +37,10 @@ const Tabs = ({ activeTab }) => {
                 return (
                     <Link
                         key={tab}
-                        className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 md:px-4 md:py-2 2xl:text-base ${
+                        className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-all duration-500 ease-spring active:scale-95 md:px-4 md:py-2 2xl:text-base ${
                             isActive
-                                ? 'bg-primary-400 text-black shadow-sm'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                                ? 'bg-primary-500 text-white shadow-layered dark:bg-primary-400 dark:text-gray-900'
+                                : 'bg-black/[0.04] text-gray-600 hover:bg-black/[0.07] dark:bg-white/[0.06] dark:text-gray-300 dark:hover:bg-white/[0.11]'
                         }`}
                         href={`/editor/?tab=${tab}`}
                     >

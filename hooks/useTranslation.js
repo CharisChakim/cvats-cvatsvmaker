@@ -24,4 +24,17 @@ export function useLang() {
     return useSelector(s => s.resume?.lang ?? 'en');
 }
 
+export function useLocalizeField(tab) {
+    const lang = useLang();
+    return field => {
+        const fieldTrans = translations[lang]?.fields?.[tab]?.[field.name];
+        if (!fieldTrans) return field;
+        return {
+            ...field,
+            label: fieldTrans.label ?? field.label,
+            placeholder: fieldTrans.placeholder ?? field.placeholder,
+        };
+    };
+}
+
 export default useTranslation;

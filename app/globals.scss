@@ -3,32 +3,76 @@
 @tailwind utilities;
 
 @layer base {
-    /* Light mode primary = blue */
+    /* Paper & Ink.
+       Both scales run light→dark (50 lightest, 900 darkest) so every existing
+       `primary-N` class keeps its expected meaning. What changes per theme is
+       where the ramp sits: on paper it is anchored dark enough that mid steps
+       read as text on white; on ink it is lifted so those same steps read on
+       black. Inverting the direction instead silently turns `dark:text-primary-200`
+       into dark-on-dark, which is exactly how the skill chips became unreadable. */
     :root {
-        --color-primary-50:  239 246 255;
-        --color-primary-100: 219 234 254;
-        --color-primary-200: 191 219 254;
-        --color-primary-300: 147 197 253;
-        --color-primary-400: 96  165 250;
-        --color-primary-500: 59  130 246;
-        --color-primary-600: 37  99  235;
-        --color-primary-700: 29  78  216;
-        --color-primary-800: 30  64  175;
-        --color-primary-900: 30  58  138;
+        --color-primary-50:  241 248 244;
+        --color-primary-100: 219 237 227;
+        --color-primary-200: 184 220 200;
+        --color-primary-300: 120 180 149;
+        --color-primary-400: 31  111 74;
+        --color-primary-500: 22  96  58;
+        --color-primary-600: 18  77  47;
+        --color-primary-700: 15  61  39;
+        --color-primary-800: 12  50  32;
+        --color-primary-900: 9   38  24;
+
+        /* Paper ground and ink text — warm, never pure white on pure black */
+        --paper:        245 243 238;
+        --paper-raised: 253 252 249;
+        --ink:          28  27  25;
+        --ink-soft:     98  95  88;
+
+        /* Motion — Apple's sheet/spring curves */
+        --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+        --ease-soft:   cubic-bezier(0.4, 0.0, 0.2, 1);
+        --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+
+        /* Layered depth — many soft shadows, never one hard one */
+        --shadow-xs: 0 1px 1px rgb(0 0 0 / 0.03), 0 1px 2px rgb(0 0 0 / 0.04);
+        --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04), 0 2px 6px rgb(0 0 0 / 0.05);
+        --shadow-md: 0 2px 4px rgb(0 0 0 / 0.04), 0 6px 16px rgb(0 0 0 / 0.07);
+        --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.04), 0 14px 32px rgb(0 0 0 / 0.10);
+        --shadow-xl: 0 8px 18px rgb(0 0 0 / 0.06), 0 28px 56px rgb(0 0 0 / 0.14);
+
+        /* Translucent material */
+        --material: rgb(255 255 255 / 0.72);
+        --material-border: rgb(0 0 0 / 0.06);
+        --hairline: rgb(0 0 0 / 0.08);
     }
 
-    /* Dark mode primary = violet */
     .dark {
-        --color-primary-50:  245 243 255;
-        --color-primary-100: 237 233 254;
-        --color-primary-200: 221 214 254;
-        --color-primary-300: 196 181 253;
-        --color-primary-400: 167 139 250;
-        --color-primary-500: 139 92  246;
-        --color-primary-600: 124 58  237;
-        --color-primary-700: 109 40  217;
-        --color-primary-800: 91  33  182;
-        --color-primary-900: 76  29  149;
+        /* Same direction, lifted ramp: 200–400 stay light enough to sit on ink. */
+        --color-primary-50:  240 251 245;
+        --color-primary-100: 220 244 231;
+        --color-primary-200: 194 238 215;
+        --color-primary-300: 163 226 194;
+        --color-primary-400: 110 200 156;
+        --color-primary-500: 79  179 130;
+        --color-primary-600: 52  150 105;
+        --color-primary-700: 31  111 74;
+        --color-primary-800: 22  96  58;
+        --color-primary-900: 15  61  39;
+
+        --paper:        24  24  22;
+        --paper-raised: 34  34  31;
+        --ink:          240 238 233;
+        --ink-soft:     168 164 156;
+
+        --shadow-xs: 0 1px 1px rgb(0 0 0 / 0.20), 0 1px 2px rgb(0 0 0 / 0.24);
+        --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.24), 0 2px 6px rgb(0 0 0 / 0.28);
+        --shadow-md: 0 2px 4px rgb(0 0 0 / 0.28), 0 6px 16px rgb(0 0 0 / 0.36);
+        --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.32), 0 14px 32px rgb(0 0 0 / 0.44);
+        --shadow-xl: 0 8px 18px rgb(0 0 0 / 0.36), 0 28px 56px rgb(0 0 0 / 0.52);
+
+        --material: rgb(30 41 59 / 0.68);
+        --material-border: rgb(255 255 255 / 0.08);
+        --hairline: rgb(255 255 255 / 0.10);
     }
 
     html {
@@ -36,43 +80,214 @@
     }
 
     body {
-        @apply bg-gray-50 text-gray-900 caret-primary-400;
-        @apply dark:bg-gray-800 dark:text-gray-200;
-        font-family: 'Ubuntu', sans-serif;
+        @apply bg-paper text-ink caret-primary-500;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui,
+            'Helvetica Neue', Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+        letter-spacing: -0.011em;
     }
 
+    /* Apple sets headings tighter than body copy */
+    h1, h2, h3, h4 {
+        letter-spacing: -0.022em;
+    }
+
+    /* Cheap properties only. Transform/shadow are handled per-component so they
+       can be composited instead of repainting every link and button on the page. */
     a,
     button {
-        @apply transition-colors duration-150;
+        transition: color 180ms var(--ease-soft), background-color 180ms var(--ease-soft),
+            border-color 180ms var(--ease-soft), opacity 180ms var(--ease-soft);
+    }
+
+    /* Keyboard focus only — Apple's soft focus ring.
+       Form fields are excluded: they carry their own ring via Input.js. */
+    a:focus-visible,
+    button:focus-visible,
+    [role='button']:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 4px rgb(var(--color-primary-400) / 0.28);
+        border-radius: 12px;
     }
 }
 
 @layer components {
     .btn {
-        @apply flex cursor-pointer items-center justify-center gap-3 rounded-md border border-gray-300 bg-gray-100 px-6 py-1.5 font-medium shadow-lg shadow-gray-200/25 hover:brightness-125 2xl:text-lg;
-        @apply dark:border-gray-600 dark:bg-gray-700 dark:shadow-gray-900/25;
-        @apply active:scale-95 transition-transform duration-100;
+        @apply relative flex cursor-pointer select-none items-center justify-center gap-2.5
+               rounded-xl border px-5 py-2 font-medium 2xl:text-lg;
+        border-color: var(--material-border);
+        background-image: linear-gradient(to bottom, rgb(253 252 249), rgb(244 242 237));
+        box-shadow: var(--shadow-sm), inset 0 1px 0 rgb(255 255 255 / 0.8);
+        transition:
+            transform 240ms var(--ease-spring),
+            filter 180ms var(--ease-soft);
+
+        /* Hover shadow lives on its own layer and fades in — opacity composites on
+           the GPU, whereas animating box-shadow repaints the element every frame. */
+        &::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            box-shadow: var(--shadow-md);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 240ms var(--ease-spring);
+        }
+
+        &:hover {
+            transform: translateY(-1px);
+        }
+
+        &:hover::after {
+            opacity: 1;
+        }
+
+        &:active {
+            transform: translateY(0) scale(0.97);
+            transition-duration: 90ms;
+        }
+
+        &:active::after {
+            opacity: 0;
+        }
+
+        &:disabled {
+            @apply cursor-not-allowed;
+            transform: none;
+        }
+
+        &:disabled::after {
+            opacity: 0;
+        }
+
+        .dark & {
+            @apply text-gray-100;
+            background-image: linear-gradient(to bottom, rgb(52 50 46), rgb(41 39 36));
+            box-shadow: var(--shadow-sm), inset 0 1px 0 rgb(255 255 255 / 0.06);
+        }
 
         &-filled {
             @extend .btn;
-            @apply border-primary-500 bg-primary-400 text-black dark:bg-primary-400 dark:border-primary-500;
+            @apply border-transparent text-white;
+            background-image: linear-gradient(
+                to bottom,
+                rgb(var(--color-primary-400)),
+                rgb(var(--color-primary-600))
+            );
+            box-shadow: var(--shadow-md), inset 0 1px 0 rgb(255 255 255 / 0.25);
+
+            &::after {
+                box-shadow: var(--shadow-lg);
+            }
+
+            &:hover {
+                filter: saturate(1.1) brightness(1.04);
+            }
+
+            /* On ink the accent has to be light to register, so the label flips to
+               dark rather than white — white on a light green is only ~2:1. */
+            .dark & {
+                @apply text-gray-900;
+                background-image: linear-gradient(
+                    to bottom,
+                    rgb(var(--color-primary-300)),
+                    rgb(var(--color-primary-400))
+                );
+                box-shadow: var(--shadow-md), inset 0 1px 0 rgb(255 255 255 / 0.25);
+            }
         }
     }
 
     .card {
-        @apply rounded-md border border-gray-200 bg-white p-4 shadow-md md:p-6 2xl:p-8;
-        @apply dark:border-gray-600 dark:bg-gray-700/25 dark:shadow-xl;
-        @apply transition-shadow duration-200;
+        @apply relative rounded-2xl border bg-paper-raised p-4 md:p-6 2xl:p-8;
+        border-color: var(--material-border);
+        box-shadow: var(--shadow-md);
+        transition: transform 300ms var(--ease-spring);
+
+        &::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            box-shadow: var(--shadow-lg);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 300ms var(--ease-spring);
+        }
 
         &:hover {
-            @apply shadow-lg;
+            transform: translateY(-2px);
+        }
+
+        &:hover::after {
+            opacity: 1;
+        }
+    }
+
+    /* Translucent material — navbars, overlays, floating panels */
+    .glass {
+        background-color: var(--material);
+        border: 1px solid var(--material-border);
+        backdrop-filter: saturate(180%) blur(20px);
+        -webkit-backdrop-filter: saturate(180%) blur(20px);
+    }
+
+    /* Segmented control — Apple's pill selector (template / size pickers) */
+    .segmented {
+        @apply inline-flex items-center gap-1 rounded-xl p-1;
+        background-color: rgb(0 0 0 / 0.05);
+        border: 1px solid var(--material-border);
+
+        .dark & {
+            background-color: rgb(0 0 0 / 0.25);
+        }
+    }
+
+    .segmented-item {
+        @apply relative cursor-pointer rounded-[0.6rem] px-3 py-1 text-sm font-medium;
+        transition:
+            transform 200ms var(--ease-spring),
+            background-color 180ms var(--ease-soft),
+            color 180ms var(--ease-soft);
+
+        &:active {
+            transform: scale(0.96);
+            transition-duration: 90ms;
+        }
+
+        &[data-active='true'] {
+            @apply bg-white text-gray-900;
+            box-shadow: var(--shadow-sm);
+
+            .dark & {
+                @apply bg-gray-600 text-white;
+            }
+        }
+
+        &[data-active='false'] {
+            @apply text-gray-600;
+
+            &:hover {
+                @apply bg-black/5 text-gray-900;
+            }
+
+            .dark & {
+                @apply text-gray-300;
+
+                &:hover {
+                    @apply bg-white/10 text-white;
+                }
+            }
         }
     }
 }
 
 @layer utilities {
     .gradient {
-        @apply bg-gradient-to-r from-blue-500 to-primary-500;
+        @apply bg-gradient-to-r from-primary-500 to-primary-400;
     }
 
     .text-gradient {
@@ -80,18 +295,69 @@
         @apply bg-clip-text text-transparent;
     }
 
+    /* 3D scene root — children can rotate in depth */
+    .scene {
+        perspective: 1200px;
+        perspective-origin: center;
+    }
+
+    .preserve-3d {
+        transform-style: preserve-3d;
+    }
+
+    /* Gentle lift, for elements that aren't .card or .btn */
+    .lift {
+        position: relative;
+        transition: transform 300ms var(--ease-spring);
+
+        &::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            box-shadow: var(--shadow-lg);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 300ms var(--ease-spring);
+        }
+
+        &:hover {
+            transform: translateY(-2px);
+        }
+
+        &:hover::after {
+            opacity: 1;
+        }
+
+        &:active {
+            transform: translateY(0) scale(0.985);
+            transition-duration: 100ms;
+        }
+    }
+
+    .shadow-layered     { box-shadow: var(--shadow-md); }
+    .shadow-layered-lg  { box-shadow: var(--shadow-lg); }
+    .shadow-layered-xl  { box-shadow: var(--shadow-xl); }
+
     @media (prefers-reduced-motion: reduce) {
         .animate-fade-in,
         .animate-slide-up,
+        .animate-scale-in,
+        .animate-rise,
         .animate-shimmer,
         .animate-spin,
         .animate-ping,
+        .animate-float,
         .animate-pulse {
             animation: none !important;
         }
 
-        * {
+        *,
+        .btn,
+        .card,
+        .lift {
             transition-duration: 0ms !important;
+            transform: none !important;
         }
     }
 }
@@ -107,14 +373,23 @@
     @apply md:size-1.5;
 
     &-track {
-        @apply bg-gray-200 dark:bg-gray-700;
+        @apply bg-transparent;
     }
 
     &-thumb {
-        @apply bg-primary-500 rounded-sm;
+        @apply rounded-full;
+        background-color: rgb(0 0 0 / 0.2);
 
         &:hover {
-            @apply bg-primary-500;
+            background-color: rgb(0 0 0 / 0.32);
+        }
+
+        .dark & {
+            background-color: rgb(255 255 255 / 0.2);
+
+            &:hover {
+                background-color: rgb(255 255 255 / 0.32);
+            }
         }
     }
 }

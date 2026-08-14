@@ -61,7 +61,7 @@ const BreakdownCard = ({ label, score, feedback, matched, missing, matchedLabel,
                     <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1.5">✓ {matchedLabel}</p>
                     <div className="flex flex-wrap gap-1">
                         {matched.map((item, i) => (
-                            <span key={i} className="text-xs rounded-md bg-green-100 px-2 py-0.5 text-green-700 border border-green-200 dark:bg-green-500/10 dark:text-green-300 dark:border-green-500/20">
+                            <span key={i} className="text-xs rounded-full bg-green-100 px-2 py-0.5 text-green-700 border border-green-200 dark:bg-green-500/10 dark:text-green-300 dark:border-green-500/20">
                                 {item}
                             </span>
                         ))}
@@ -74,7 +74,7 @@ const BreakdownCard = ({ label, score, feedback, matched, missing, matchedLabel,
                     <p className="text-xs font-semibold text-red-600 dark:text-red-400 mb-1.5">✗ {missingLabel}</p>
                     <div className="flex flex-wrap gap-1">
                         {missing.map((item, i) => (
-                            <span key={i} className="text-xs rounded-md bg-red-50 px-2 py-0.5 text-red-700 border border-red-200 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/20">
+                            <span key={i} className="text-xs rounded-full bg-red-50 px-2 py-0.5 text-red-700 border border-red-200 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/20">
                                 {item}
                             </span>
                         ))}

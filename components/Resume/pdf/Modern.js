@@ -3,35 +3,37 @@
 import { Page, Text, View, Document, Link, StyleSheet } from '@react-pdf/renderer';
 import formatDate from '@/utils/formatDate';
 import '../fonts';
+import { getFontSet } from '../fonts';
 
 const ACCENT = '#1f6feb';
-const TEXT = '#1f2933';
-const MUTED = '#5b6b7a';
-const RULE = '#dde3ea';
+const TEXT = '#000000';
+const MUTED = '#333333';
+const RULE = '#cccccc';
 
-const buildStyles = (sizeMode) => {
+const buildStyles = (sizeMode, fontId) => {
     const compact = sizeMode === 'compact' || sizeMode === 'onepage' || sizeMode === true;
     const onePage = sizeMode === 'onepage';
+    const f = getFontSet(fontId);
     return StyleSheet.create({
         page: {
             backgroundColor: '#ffffff',
             color: TEXT,
             padding: onePage ? 16 : compact ? 24 : 36,
-            fontFamily: 'Carlito',
+            fontFamily: f.regular,
             fontSize: compact ? 9 : 10.5,
             lineHeight: compact ? 1.25 : 1.45,
         },
         headerName: {
             color: TEXT,
             fontSize: compact ? 18 : 24,
-            fontFamily: 'Carlito',
+            fontFamily: f.bold,
             fontWeight: 'bold',
             letterSpacing: 0.5,
         },
         headerTitle: {
             color: ACCENT,
             fontSize: compact ? 10 : 12,
-            fontFamily: 'Carlito',
+            fontFamily: f.bold,
             fontWeight: 'bold',
             marginTop: 2,
             textTransform: 'uppercase',
@@ -53,7 +55,7 @@ const buildStyles = (sizeMode) => {
             width: 48,
         },
         sectionTitle: {
-            fontFamily: 'Carlito',
+            fontFamily: f.bold,
             fontWeight: 'bold',
             color: ACCENT,
             fontSize: compact ? 9.5 : 11,
@@ -75,7 +77,7 @@ const buildStyles = (sizeMode) => {
             alignItems: 'flex-start',
         },
         itemTitle: {
-            fontFamily: 'Carlito',
+            fontFamily: f.bold,
             fontWeight: 'bold',
             fontSize: compact ? 9.5 : 11,
             color: TEXT,
@@ -88,7 +90,7 @@ const buildStyles = (sizeMode) => {
         date: {
             fontSize: compact ? 8.5 : 9.5,
             color: MUTED,
-            fontFamily: 'Carlito',
+            fontFamily: f.italic,
             fontStyle: 'italic',
         },
         bulletRow: {
@@ -291,7 +293,7 @@ const Languages = ({ data, styles }) => (
 
 const Resume = ({ data }) => {
     const { contact = {}, summary, education = [], experience = [], projects = [], skills, certificates = [], languages = [] } = data;
-    const styles = buildStyles(data.onePage);
+    const styles = buildStyles(data.onePage, data.font);
 
     return (
         <Document language="en">

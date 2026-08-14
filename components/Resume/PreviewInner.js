@@ -3,15 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 import Resume from './pdf';
 import { useDispatch, useSelector } from 'react-redux';
-import { setTemplate, setOnePage } from '@/store/slices/resumeSlice';
+import { setTemplate, setOnePage, setFont } from '@/store/slices/resumeSlice';
 import { usePDF } from '@react-pdf/renderer';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { Document, Page } from 'react-pdf';
 import { FaDownload, FaEye, FaMagnifyingGlass } from 'react-icons/fa6';
 import { IoClose } from 'react-icons/io5';
 import Link from 'next/link';
 import useTranslation from '@/hooks/useTranslation';
-
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+import Tilt3D from '@/components/UI/Tilt3D';
+import { CV_FONTS } from './fonts';
+import '@/utils/extractTextFromPdf';
 
 const Loader = () => (
     <div className="flex min-h-96 w-full items-center justify-center">
@@ -60,11 +61,11 @@ const PreviewModal = ({ url, onClose, t }) => {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 md:p-6 backdrop-blur-sm animate-fade-in"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 md:p-6 backdrop-blur-md animate-fade-in"
             onClick={onClose}
         >
             <div
-                className="relative flex h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl dark:bg-gray-900"
+                className="relative flex h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-layered-xl dark:bg-gray-900 animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2 dark:border-white/10">
@@ -110,6 +111,7 @@ const Preview = () => {
     const resumeData = useSelector(state => state.resume);
     const template = resumeData.template || 'classic';
     const sizeMode = resumeData.onePage === 'compact' || resumeData.onePage === 'onepage' ? resumeData.onePage : 'normal';
+    const font = resumeData.font || 'Carlito';
     const document = <Resume data={resumeData} />;
     const [instance, updateInstance] = usePDF({ document });
     const [modalOpen, setModalOpen] = useState(false);
@@ -128,77 +130,99 @@ const Preview = () => {
         return () => ro.disconnect();
     }, []);
 
+    // One effect for all three layout knobs instead of three separate ones. The
+    // mount run is kept: it is what produces the first PDF, and skipping it left
+    // the preview stuck on "No PDF file specified".
+    useEffect(() => {
+        updateInstance(document);
+    }, [template, sizeMode, font]);
+
+    // Only re-render once edits are committed — `saved` also flips to false on every
+    // keystroke, which must not trigger a PDF rebuild.
     useEffect(() => {
         if (resumeData.saved) updateInstance(document);
     }, [resumeData.saved]);
 
-    useEffect(() => {
-        updateInstance(document);
-    }, [template]);
-
-    useEffect(() => {
-        updateInstance(document);
-    }, [sizeMode]);
-
     return (
         <>
             <div ref={parentRef} className="relative w-full md:w-[24rem] 2xl:w-[28rem]">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">{t('preview.template')}</span>
-                    {TEMPLATES.map(tmpl => (
-                        <button
-                            key={tmpl.id}
-                            onClick={() => dispatch(setTemplate(tmpl.id))}
-                            className={`rounded-md px-3 py-1 text-sm transition-all duration-150 active:scale-95 ${
-                                template === tmpl.id
-                                    ? 'bg-primary-400 text-black'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
-                            }`}
-                        >
-                            {tmpl.label}
-                        </button>
-                    ))}
+                <div className="mb-2.5 flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('preview.template')}</span>
+                    <div className="segmented">
+                        {TEMPLATES.map(tmpl => (
+                            <button
+                                key={tmpl.id}
+                                onClick={() => dispatch(setTemplate(tmpl.id))}
+                                data-active={template === tmpl.id}
+                                className="segmented-item"
+                            >
+                                {tmpl.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">{t('preview.size')}</span>
-                    {[
-                        { id: 'normal', labelKey: 'preview.normal' },
-                        { id: 'compact', labelKey: 'preview.compact' },
-                        { id: 'onepage', labelKey: 'preview.onepage' },
-                    ].map(opt => (
-                        <button
-                            key={opt.id}
-                            onClick={() => dispatch(setOnePage(opt.id))}
-                            className={`rounded-md px-3 py-1 text-sm transition-all duration-150 active:scale-95 ${
-                                sizeMode === opt.id
-                                    ? 'bg-primary-400 text-black'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
-                            }`}
-                        >
-                            {t(opt.labelKey)}
-                        </button>
-                    ))}
+                <div className="mb-2.5 flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('preview.size')}</span>
+                    <div className="segmented">
+                        {[
+                            { id: 'normal', labelKey: 'preview.normal' },
+                            { id: 'compact', labelKey: 'preview.compact' },
+                            { id: 'onepage', labelKey: 'preview.onepage' },
+                        ].map(opt => (
+                            <button
+                                key={opt.id}
+                                onClick={() => dispatch(setOnePage(opt.id))}
+                                data-active={sizeMode === opt.id}
+                                className="segmented-item"
+                            >
+                                {t(opt.labelKey)}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                <div className="overflow-hidden rounded-sm" style={{ aspectRatio: '210 / 297' }}>
-                    {instance.loading || containerWidth === 0 ? (
-                        <Loader />
-                    ) : (
-                        <Document
-                            loading={<Loader />}
-                            file={instance.url}
-                            onLoadSuccess={({ numPages }) => setMainNumPages(numPages)}
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('preview.font')}</span>
+                    <div className="segmented">
+                        {CV_FONTS.map(opt => (
+                            <button
+                                key={opt.id}
+                                onClick={() => dispatch(setFont(opt.id))}
+                                data-active={font === opt.id}
+                                className="segmented-item"
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="scene">
+                    <Tilt3D className="rounded-xl" angle={5}>
+                        <div
+                            className="overflow-hidden rounded-xl shadow-layered-lg"
+                            style={{ aspectRatio: '210 / 297' }}
                         >
-                            <Page
-                                pageNumber={1}
-                                renderTextLayer={false}
-                                renderAnnotationLayer={false}
-                                loading={<Loader />}
-                                width={containerWidth}
-                            />
-                        </Document>
-                    )}
+                            {instance.loading || containerWidth === 0 ? (
+                                <Loader />
+                            ) : (
+                                <Document
+                                    loading={<Loader />}
+                                    file={instance.url}
+                                    onLoadSuccess={({ numPages }) => setMainNumPages(numPages)}
+                                >
+                                    <Page
+                                        pageNumber={1}
+                                        renderTextLayer={false}
+                                        renderAnnotationLayer={false}
+                                        loading={<Loader />}
+                                        width={containerWidth}
+                                    />
+                                </Document>
+                            )}
+                        </div>
+                    </Tilt3D>
                 </div>
 
                 {!instance.loading && sizeMode === 'onepage' && mainNumPages > 1 && (

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { callAI, extractJson } from '@/lib/callAI';
+import { callAI, extractJson, hasAiProvider } from '@/lib/callAI';
 import {
   OPENROUTER_TEXT_MODELS,
   OPENROUTER_VISION_MODELS,
@@ -71,7 +71,7 @@ export async function POST(req) {
         { status: 400 },
       );
     }
-    if (!process.env.OPENROUTER_API_KEY && !process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
+    if (!hasAiProvider()) {
       return NextResponse.json({ error: 'No AI provider configured' }, { status: 500 });
     }
 

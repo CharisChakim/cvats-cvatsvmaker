@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { callAI, extractJson } from '@/lib/callAI';
+import { callAI, extractJson, hasAiProvider } from '@/lib/callAI';
 import { OPENROUTER_TEXT_MODELS, GROQ_TEXT_MODELS, GEMINI_MODELS } from '@/lib/aiModels';
 
 const SYSTEM_PROMPT = `You are a resume-to-job-description gap analyst. Your ONLY job is to identify what the job description requires that is COMPLETELY ABSENT from the candidate's CV.
@@ -62,7 +62,7 @@ export async function POST(req) {
     if (!jobText || jobText.length < 30) {
       return NextResponse.json({ error: 'Job description is too short.' }, { status: 400 });
     }
-    if (!process.env.OPENROUTER_API_KEY && !process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
+    if (!hasAiProvider()) {
       return NextResponse.json({ error: 'No AI provider configured' }, { status: 500 });
     }
 

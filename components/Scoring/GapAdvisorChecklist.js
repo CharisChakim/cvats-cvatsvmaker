@@ -104,7 +104,7 @@ const GapAdvisorChecklist = ({ gaps, t, onApply, onBack }) => {
                         {gaps.experienceQuestions.map(item => {
                             const isOn = !!expAnswers[item.id]?.enabled;
                             return (
-                                <div key={item.id} className={`rounded-lg border transition-colors ${isOn ? 'border-violet-400/40 bg-violet-50/50 dark:bg-violet-500/5' : 'border-gray-200 dark:border-gray-700'}`}>
+                                <div key={item.id} className={`rounded-xl border transition-colors ${isOn ? 'border-violet-400/40 bg-violet-50/50 dark:bg-violet-500/5' : 'border-gray-200 dark:border-gray-700'}`}>
                                     <button
                                         type="button"
                                         onClick={() => toggleExp(item.id)}
@@ -130,7 +130,7 @@ const GapAdvisorChecklist = ({ gaps, t, onApply, onBack }) => {
                                                 value={expAnswers[item.id]?.details || ''}
                                                 onChange={e => setExpDetail(item.id, e.target.value)}
                                                 placeholder={item.placeholder}
-                                                className="block w-full rounded-md border border-gray-300 bg-white/75 p-2 text-sm text-gray-900 shadow-sm outline-none focus:border-2 focus:border-violet-500 focus:bg-white dark:border-gray-600 dark:bg-gray-700/75 dark:text-gray-100 dark:focus:bg-gray-700 resize-none"
+                                                className="block w-full rounded-xl border border-black/10 bg-paper-raised p-2 text-sm text-gray-900 outline-none transition-all duration-300 ease-spring focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25 dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-100 resize-none"
                                             />
                                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tell us briefly — AI will incorporate this into your CV naturally.</p>
                                         </div>
@@ -181,7 +181,7 @@ const GapAdvisorChecklist = ({ gaps, t, onApply, onBack }) => {
                         {keywordGaps.map(item => {
                             const isOn = !!keywordAnswers[item.keyword]?.enabled;
                             return (
-                                <div key={item.keyword} className={`rounded-lg border transition-colors ${isOn ? 'border-blue-400/40 bg-blue-50/50 dark:bg-blue-500/5' : 'border-gray-200 dark:border-gray-700'}`}>
+                                <div key={item.keyword} className={`rounded-xl border transition-colors ${isOn ? 'border-blue-400/40 bg-blue-50/50 dark:bg-blue-500/5' : 'border-gray-200 dark:border-gray-700'}`}>
                                     <button
                                         type="button"
                                         onClick={() => toggleKeyword(item.keyword)}
@@ -207,7 +207,7 @@ const GapAdvisorChecklist = ({ gaps, t, onApply, onBack }) => {
                                                 value={keywordAnswers[item.keyword]?.details || ''}
                                                 onChange={e => setKeywordDetail(item.keyword, e.target.value)}
                                                 placeholder={item.placeholder}
-                                                className="block w-full rounded-md border border-gray-300 bg-white/75 p-2 text-sm text-gray-900 shadow-sm outline-none focus:border-2 focus:border-blue-500 focus:bg-white dark:border-gray-600 dark:bg-gray-700/75 dark:text-gray-100 dark:focus:bg-gray-700 resize-none"
+                                                className="block w-full rounded-xl border border-black/10 bg-paper-raised p-2 text-sm text-gray-900 shadow-sm outline-none focus:border-2 focus:border-blue-500 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-100 resize-none"
                                             />
                                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tell us briefly — AI will weave this terminology into your CV naturally.</p>
                                         </div>

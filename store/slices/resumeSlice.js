@@ -12,6 +12,7 @@ const defaultResume = {
 
     template: 'classic',
     onePage: 'normal',
+    font: 'Carlito',
     saved: false,
     lang: 'en',
 };
@@ -75,6 +76,11 @@ const resumeSlice = createSlice({
             state.saved = false;
         },
 
+        setFont: (state, action) => {
+            state.font = action.payload;
+            state.saved = false;
+        },
+
         saveResume: state => {
             state.saved = true;
         },
@@ -94,6 +100,7 @@ export const {
     setFullResume,
     setTemplate,
     setOnePage,
+    setFont,
     setLang,
 } = resumeSlice.actions;
 export default resumeSlice.reducer;

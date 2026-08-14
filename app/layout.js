@@ -6,15 +6,14 @@ import {GoogleAnalytics} from '@next/third-parties/google'
 
 export const metadata = {
     metadataBase: 'http://cvats.vercel.app',
-    title: 'CVATS — Free AI-Powered Resume Builder',
+    title: 'C-VATS — Get past the résumé screener',
     description:
-        'CVATS is an AI-powered, ATS-friendly resume builder. No login required — input your details, upload a PDF resume, and export a clean A4 PDF in seconds.',
-    icons: {
-        icon: '/favicon.svg',
-        shortcut: '/favicon.svg',
-    },
+        'C-VATS scores your résumé against the job you actually want, shows you the exact gaps, and rewrites them with you. No login. Export a clean ATS-safe PDF in seconds.',
+    // No `icons` entry: app/icon.svg is picked up by Next's file convention, which
+    // takes precedence over this field anyway. The old app/favicon.ico silently won
+    // over the configured SVG, which is why the tab kept showing the stale mark.
     openGraph: {
-        title: 'CVATS',
+        title: 'C-VATS',
         images: `/banner.png`,
         type: 'website',
     },
@@ -28,7 +27,7 @@ export default function RootLayout({ children }) {
         <html lang="en">
             <body>
                 {/* Prevent flash of wrong theme before React hydrates */}
-                <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theme');if(t!=='light')document.documentElement.classList.add('dark');})();` }} />
+                <script dangerouslySetInnerHTML={{ __html: `(function(){if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark');})();` }} />
                 <ReduxProvider>
                     <Header />
                     <div className="mx-auto  min-h-[calc(100vh-3rem)]">{children}</div>

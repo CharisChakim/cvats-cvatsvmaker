@@ -18,7 +18,7 @@ const styles = StyleSheet.create({
     },
     bullet: {
         height: '100%',
-        color: '#444'
+        color: '#000000'
     },
 });
 

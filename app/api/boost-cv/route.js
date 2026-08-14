@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { callAI } from '@/lib/callAI';
+import { callAI, hasAiProvider } from '@/lib/callAI';
 import { OPENROUTER_TEXT_MODELS, GROQ_TEXT_MODELS, GEMINI_MODELS } from '@/lib/aiModels';
 
 const PROMPT_SAFE = `You are an ATS optimization assistant. Your only task is to return the COMPLETE resume text with targeted wording improvements — nothing more.
@@ -65,7 +65,7 @@ export async function POST(req) {
     if (!jobText || jobText.length < 30) {
       return NextResponse.json({ error: 'Job description is too short.' }, { status: 400 });
     }
-    if (!process.env.OPENROUTER_API_KEY && !process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
+    if (!hasAiProvider()) {
       return NextResponse.json({ error: 'No AI provider configured' }, { status: 500 });
     }
 

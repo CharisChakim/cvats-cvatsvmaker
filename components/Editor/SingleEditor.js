@@ -4,8 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import Input from '../UI/Input';
 import { updateResumeValue } from '@/store/slices/resumeSlice';
 import ResumeFields from '@/config/ResumeFields';
-import useTranslation, { useLang } from '@/hooks/useTranslation';
-import translations from '@/lib/translations';
+import useTranslation, { useLocalizeField } from '@/hooks/useTranslation';
 
 const CONTACT_PERSONAL = ['name', 'title', 'email', 'phone', 'address'];
 const CONTACT_SOCIAL = ['linkedin', 'github', 'blogs', 'twitter', 'portfolio'];
@@ -15,21 +14,11 @@ const SingleEditor = ({ tab }) => {
     const dispatch = useDispatch();
     const resumeData = useSelector(state => state.resume[tab]);
     const t = useTranslation();
-    const lang = useLang();
+    const localizeField = useLocalizeField(tab);
 
     const handleChange = e => {
         const { name, value } = e.target;
         dispatch(updateResumeValue({ tab, name, value }));
-    };
-
-    const localizeField = field => {
-        const fieldTrans = translations[lang]?.fields?.[tab]?.[field.name];
-        if (!fieldTrans) return field;
-        return {
-            ...field,
-            label: fieldTrans.label ?? field.label,
-            placeholder: fieldTrans.placeholder ?? field.placeholder,
-        };
     };
 
     const renderField = field => {

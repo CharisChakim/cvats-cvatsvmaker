@@ -1,218 +1,86 @@
 import { StyleSheet } from '@react-pdf/renderer';
 import './fonts';
+import { getFontSet } from './fonts';
 
-const normalStyles = StyleSheet.create({
-    page: {
-        backgroundColor: '#ffffff',
-        color: '#555',
-        padding: 30,
-        fontFamily: 'Carlito',
-    },
+const TEXT = '#000000';
+const SECONDARY = '#333333';
 
-    header: {
-        textAlign: 'center',
-    },
+const buildStyles = (sizeMode, fontId) => {
+    const compact = sizeMode === 'compact' || sizeMode === 'onepage' || sizeMode === true;
+    const onePage = sizeMode === 'onepage';
+    const f = getFontSet(fontId);
 
-    header__name: {
-        color: '#111',
-        fontSize: 20,
-        fontFamily: 'Carlito',
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    header__links: {
-        color: '#555',
-        fontSize: 11,
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 14,
-        marginTop: 6,
-        marginBottom: 4,
-    },
+    return StyleSheet.create({
+        page: {
+            backgroundColor: '#ffffff',
+            color: TEXT,
+            padding: onePage ? 14 : compact ? 20 : 30,
+            fontFamily: f.regular,
+        },
 
-    title_wrapper: {
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: 12,
-    },
+        header: {
+            textAlign: 'center',
+        },
 
-    subTitle_wrapper: {
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: 11,
-    },
+        header__name: {
+            color: TEXT,
+            fontSize: compact ? 16 : 20,
+            fontFamily: f.bold,
+            fontWeight: 'bold',
+            textAlign: 'center',
+        },
+        header__links: {
+            color: SECONDARY,
+            fontSize: compact ? 9.5 : 11,
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'center',
+            gap: compact ? 10 : 14,
+            marginTop: compact ? 4 : 6,
+            marginBottom: compact ? 2 : 4,
+        },
 
-    title: {
-        fontFamily: 'Carlito',
-        fontWeight: 'bold',
-        marginRight: 'auto',
-        color: '#555',
-    },
-    date: {
-        fontFamily: 'Carlito',
-        fontStyle: 'italic',
-        fontSize: 10,
-    },
+        title_wrapper: {
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: compact ? 10.5 : 12,
+        },
 
-    line: {
-        borderBottom: '1px solid #eee',
-        margin: '5px 0px',
-    },
-    lists: {
-        fontSize: 10.2,
-        marginTop: 2,
-    },
-    link: {
-        color: '#666',
-    },
-});
+        subTitle_wrapper: {
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: compact ? 9.5 : 11,
+        },
 
-const compactStyles = StyleSheet.create({
-    page: {
-        backgroundColor: '#ffffff',
-        color: '#555',
-        padding: 20,
-        fontFamily: 'Carlito',
-    },
+        title: {
+            fontFamily: f.bold,
+            fontWeight: 'bold',
+            marginRight: 'auto',
+            color: TEXT,
+        },
+        date: {
+            fontFamily: f.italic,
+            fontStyle: 'italic',
+            fontSize: compact ? 8.5 : 10,
+            color: SECONDARY,
+        },
 
-    header: {
-        textAlign: 'center',
-    },
+        line: {
+            borderBottom: '1px solid #dddddd',
+            margin: onePage ? '2px 0px' : compact ? '3px 0px' : '5px 0px',
+        },
+        lists: {
+            fontSize: compact ? 8.8 : 10.2,
+            marginTop: compact ? 1 : 2,
+        },
+        link: {
+            color: TEXT,
+        },
+    });
+};
 
-    header__name: {
-        color: '#111',
-        fontSize: 16,
-        fontFamily: 'Carlito',
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    header__links: {
-        color: '#555',
-        fontSize: 9.5,
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 10,
-        marginTop: 4,
-        marginBottom: 2,
-    },
-
-    title_wrapper: {
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: 10.5,
-    },
-
-    subTitle_wrapper: {
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: 9.5,
-    },
-
-    title: {
-        fontFamily: 'Carlito',
-        fontWeight: 'bold',
-        marginRight: 'auto',
-        color: '#555',
-    },
-    date: {
-        fontFamily: 'Carlito',
-        fontStyle: 'italic',
-        fontSize: 8.5,
-    },
-
-    line: {
-        borderBottom: '1px solid #eee',
-        margin: '3px 0px',
-    },
-    lists: {
-        fontSize: 8.8,
-        marginTop: 1,
-    },
-    link: {
-        color: '#666',
-    },
-});
-
-const onePageStyles = StyleSheet.create({
-    page: {
-        backgroundColor: '#ffffff',
-        color: '#555',
-        padding: 14,
-        fontFamily: 'Carlito',
-    },
-
-    header: {
-        textAlign: 'center',
-    },
-
-    header__name: {
-        color: '#111',
-        fontSize: 16,
-        fontFamily: 'Carlito',
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    header__links: {
-        color: '#555',
-        fontSize: 9.5,
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 10,
-        marginTop: 4,
-        marginBottom: 2,
-    },
-
-    title_wrapper: {
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: 10.5,
-    },
-
-    subTitle_wrapper: {
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: 9.5,
-    },
-
-    title: {
-        fontFamily: 'Carlito',
-        fontWeight: 'bold',
-        marginRight: 'auto',
-        color: '#555',
-    },
-    date: {
-        fontFamily: 'Carlito',
-        fontStyle: 'italic',
-        fontSize: 8.5,
-    },
-
-    line: {
-        borderBottom: '1px solid #eee',
-        margin: '2px 0px',
-    },
-    lists: {
-        fontSize: 8.8,
-        marginTop: 1,
-    },
-    link: {
-        color: '#666',
-    },
-});
-
-export { normalStyles, compactStyles, onePageStyles };
-export default normalStyles;
+export default buildStyles;

@@ -27,7 +27,7 @@ const HistorySection = ({ items, onSelect, activeKey, renderItem }) => {
                         <li key={i}>
                             <button
                                 onClick={() => onSelect(item)}
-                                className={`w-full flex items-center gap-2 rounded-md px-3 py-2 text-left text-xs transition-colors duration-150 border ${
+                                className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors duration-150 border ${
                                     active
                                         ? 'border-primary-400/40 bg-primary-50 text-primary-700 dark:bg-primary-400/10 dark:text-primary-300'
                                         : 'border-gray-200 dark:border-gray-700 hover:border-primary-400/40 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-600 dark:text-gray-400'
@@ -180,9 +180,18 @@ const JobInput = ({ t, onJobReady, initialUrl = '', initialFetchedText = '', onU
 
     const handleTabChange = tab => {
         setActiveTab(tab);
-        onJobReady(null);
-        setFetchedText('');
         setFetchError('');
+
+        // Re-emit whatever the target tab already holds. Blanking this out left the
+        // content visible on screen while the Score button stayed disabled, and it
+        // threw away a fetched URL result that would then need re-fetching.
+        if (tab === 'text') {
+            onJobReady(text.trim() ? { type: 'text', value: text } : null);
+        } else if (tab === 'url') {
+            onJobReady(fetchedText ? { type: 'text', value: fetchedText } : null);
+        } else {
+            onJobReady(screenshotPreview ? { type: 'image', value: screenshotPreview } : null);
+        }
     };
 
     const hostOf = rawUrl => {
@@ -217,7 +226,7 @@ const JobInput = ({ t, onJobReady, initialUrl = '', initialFetchedText = '', onU
             {activeTab === 'text' && (
                 <div>
                     <textarea
-                        className="block w-full rounded-md border border-gray-300 bg-white/75 p-3 text-sm text-gray-900 shadow-md outline-none focus:border-2 focus:border-primary-500 focus:bg-white dark:border-gray-600 dark:bg-gray-700/75 dark:text-gray-100 dark:focus:bg-gray-700 min-h-48 resize-y transition-all duration-150"
+                        className="block w-full rounded-xl border border-black/10 bg-paper-raised p-3 text-sm text-gray-900 outline-none transition-all duration-300 ease-spring focus:border-primary-500 focus:ring-4 focus:ring-primary-400/25 dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-100 min-h-48 resize-y transition-all duration-150"
                         placeholder={t('scoring.pasteTextPlaceholder')}
                         value={text}
                         onChange={handleTextChange}
@@ -247,7 +256,7 @@ const JobInput = ({ t, onJobReady, initialUrl = '', initialFetchedText = '', onU
                             onChange={e => { setUrl(e.target.value); setActiveUrlKey(null); }}
                             onKeyDown={e => e.key === 'Enter' && handleFetchUrl()}
                             placeholder={t('scoring.urlPlaceholder')}
-                            className="block flex-1 rounded-md border border-gray-300 bg-white/75 p-2.5 text-sm text-gray-900 shadow-md outline-none focus:border-2 focus:border-primary-500 focus:bg-white dark:border-gray-600 dark:bg-gray-700/75 dark:text-gray-100 dark:focus:bg-gray-700 transition-all duration-150"
+                            className="block flex-1 rounded-xl border border-black/10 bg-paper-raised p-2.5 text-sm text-gray-900 outline-none transition-all duration-300 ease-spring focus:border-primary-500 focus:ring-4 focus:ring-primary-400/25 dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-100 transition-all duration-150"
                         />
                         <button
                             onClick={() => handleFetchUrl()}
@@ -260,13 +269,13 @@ const JobInput = ({ t, onJobReady, initialUrl = '', initialFetchedText = '', onU
                     </div>
 
                     {fetchError && (
-                        <p className="mt-2 text-sm text-red-400 rounded-md bg-red-400/10 px-3 py-2 border border-red-400/20">
+                        <p className="mt-2 text-sm text-red-400 rounded-xl bg-red-400/10 px-3 py-2 border border-red-400/20">
                             {fetchError}
                         </p>
                     )}
 
                     {fetchedText && (
-                        <div className="mt-2 rounded-md border border-green-500/30 bg-green-500/5 p-3">
+                        <div className="mt-2 rounded-xl border border-green-500/30 bg-green-500/5 p-3">
                             <p className="text-xs font-medium text-green-400 mb-1">✓ Job posting fetched successfully</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-3">{fetchedText.slice(0, 300)}…</p>
                         </div>
@@ -291,7 +300,7 @@ const JobInput = ({ t, onJobReady, initialUrl = '', initialFetchedText = '', onU
             {activeTab === 'screenshot' && (
                 <div>
                     {!screenshotPreview ? (
-                        <label className="flex flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed border-gray-300 bg-gray-50 p-10 cursor-pointer hover:border-primary-400 hover:bg-primary-400/5 transition-all duration-150 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-primary-400">
+                        <label className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 p-10 cursor-pointer hover:border-primary-400 hover:bg-primary-400/5 transition-all duration-150 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-primary-400">
                             <FaFileImage className="text-4xl text-gray-400" />
                             <div className="text-center">
                                 <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('scoring.clickOrDrag')}</p>
@@ -300,7 +309,7 @@ const JobInput = ({ t, onJobReady, initialUrl = '', initialFetchedText = '', onU
                             <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleScreenshotChange} />
                         </label>
                     ) : (
-                        <div className="relative rounded-md overflow-hidden border border-gray-200 dark:border-gray-700">
+                        <div className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
                             <img src={screenshotPreview} alt="Job screenshot" className="w-full max-h-64 object-cover object-top" />
                             <button
                                 onClick={clearScreenshot}

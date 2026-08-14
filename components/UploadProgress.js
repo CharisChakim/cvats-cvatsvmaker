@@ -79,7 +79,7 @@ const UploadProgress = ({ stage, fileName }) => {
                             return (
                                 <li
                                     key={step.id}
-                                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-300 ${
+                                    className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors duration-300 ${
                                         status === 'active'
                                             ? 'bg-primary-400/10 text-white'
                                             : status === 'done'

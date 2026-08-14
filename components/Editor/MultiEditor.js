@@ -9,8 +9,7 @@ import { useState } from 'react';
 import { FaArrowUp, FaPencil, FaTrash } from 'react-icons/fa6';
 import { FaArrowDown } from 'react-icons/fa';
 import { TbArrowsMinimize } from 'react-icons/tb';
-import useTranslation, { useLang } from '@/hooks/useTranslation';
-import translations from '@/lib/translations';
+import useTranslation, { useLocalizeField } from '@/hooks/useTranslation';
 
 const MultiEditor = ({ tab }) => {
     const { fields } = ResumeFields[tab];
@@ -18,7 +17,7 @@ const MultiEditor = ({ tab }) => {
     const dispatch = useDispatch();
     const resumeData = useSelector(state => state.resume[tab]);
     const t = useTranslation();
-    const lang = useLang();
+    const localizeField = useLocalizeField(tab);
 
     const handleChange = (e, i) => {
         const { name, value } = e.target;
@@ -33,16 +32,6 @@ const MultiEditor = ({ tab }) => {
     const deleteCard = index => {
         dispatch(deleteIndex({ tab, index }));
         setSelectedCard(null);
-    };
-
-    const localizeField = field => {
-        const fieldTrans = translations[lang]?.fields?.[tab]?.[field.name];
-        if (!fieldTrans) return field;
-        return {
-            ...field,
-            label: fieldTrans.label ?? field.label,
-            placeholder: fieldTrans.placeholder ?? field.placeholder,
-        };
     };
 
     return (

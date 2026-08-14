@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { callAI } from '@/lib/callAI';
+import { callAI, hasAiProvider } from '@/lib/callAI';
 import { OPENROUTER_TEXT_MODELS, GROQ_TEXT_MODELS, GEMINI_MODELS } from '@/lib/aiModels';
 
 const KIND_PROMPTS = {
@@ -43,7 +43,7 @@ export async function POST(req) {
     if (!text) return NextResponse.json({ error: 'Nothing to refine — write something first.' }, { status: 400 });
     if (text.length > 4000) return NextResponse.json({ error: 'Text too long to refine.' }, { status: 413 });
     if (!KIND_PROMPTS[kind]) return NextResponse.json({ error: 'Unknown refine kind.' }, { status: 400 });
-    if (!process.env.OPENROUTER_API_KEY && !process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
+    if (!hasAiProvider()) {
       return NextResponse.json({ error: 'No AI provider configured' }, { status: 500 });
     }
 

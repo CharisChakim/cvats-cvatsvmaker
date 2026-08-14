@@ -52,7 +52,7 @@ const Editor = ({ tab }) => {
             <form onSubmit={save} className="card my-8 animate-fade-in">
                 <div className="mb-6 flex items-center gap-3 border-b border-gray-100 pb-5 dark:border-white/10">
                     {Icon && (
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-400/20 text-primary-600 dark:bg-primary-400/10 dark:text-primary-300">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-400/20 text-primary-600 dark:bg-primary-400/10 dark:text-primary-300">
                             <Icon className="text-base" />
                         </div>
                     )}

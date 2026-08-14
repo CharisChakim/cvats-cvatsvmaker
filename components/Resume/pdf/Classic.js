@@ -3,7 +3,7 @@
 import { Page, Text, View, Document, Link } from '@react-pdf/renderer';
 import Section from './Section';
 import ListItem from './ListItem';
-import { normalStyles, compactStyles, onePageStyles } from '../Styles';
+import buildStyles from '../Styles';
 import formatDate from '@/utils/formatDate';
 
 const Header = ({ data, styles, compact }) => {
@@ -24,7 +24,7 @@ const Header = ({ data, styles, compact }) => {
                 {contactLinks
                     .filter(obj => obj.value)
                     .map(({ value, name }) => (
-                        <Link key={name} src={value} style={{ color: '#555' }}>
+                        <Link key={name} src={value} style={{ color: '#000000' }}>
                             {name}
                         </Link>
                     ))}
@@ -71,7 +71,7 @@ const Projects = ({ data, styles, compact }) => (
                     <Link
                         style={{
                             textDecoration: 'none',
-                            color: '#666',
+                            color: '#333333',
                         }}
                         src={project.url}
                     >
@@ -138,7 +138,7 @@ const Skills = ({ data, compact }) => (
                         paddingVertical: compact ? 1 : 2,
                         paddingHorizontal: compact ? 4 : 6,
                         backgroundColor: '#f1f1f1',
-                        color: '#333',
+                        color: '#000000',
                         borderRadius: 3,
                         marginBottom: compact ? 2 : 4,
                         marginRight: compact ? 2 : 4,
@@ -182,7 +182,7 @@ const Languages = ({ data, compact }) => (
             {data.map(({ language, proficiency }, i) => (
                 <View key={i}>
                     <Text style={{ fontSize: compact ? 10 : 12 }}>{language}</Text>
-                    <Text style={{ fontSize: compact ? 8.5 : 10, color: '#777' }}>{proficiency}</Text>
+                    <Text style={{ fontSize: compact ? 8.5 : 10, color: '#333333' }}>{proficiency}</Text>
                 </View>
             ))}
         </View>
@@ -193,7 +193,7 @@ const Resume = ({ data }) => {
     const { contact, education, experience, projects, summary, skills, certificates, languages } = data;
     const sizeMode = data.onePage;
     const compact = sizeMode === 'compact' || sizeMode === 'onepage' || sizeMode === true;
-    const styles = sizeMode === 'onepage' ? onePageStyles : compact ? compactStyles : normalStyles;
+    const styles = buildStyles(sizeMode, data.font);
 
     return (
         <Document language="en">
