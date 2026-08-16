@@ -4,6 +4,7 @@ import { Page, Text, View, Document, Link, StyleSheet } from '@react-pdf/rendere
 import formatDate from '@/utils/formatDate';
 import '../fonts';
 import { getFontSet } from '../fonts';
+import { DEFAULT_SECTIONS, isCustomSection } from '@/store/slices/resumeSlice';
 
 const ACCENT = '#1f6feb';
 const TEXT = '#000000';
@@ -186,8 +187,8 @@ const Header = ({ data, styles }) => {
     );
 };
 
-const Experience = ({ data, styles }) => (
-    <Section title="Experience" styles={styles}>
+const Experience = ({ data, styles, title = 'Experience' }) => (
+    <Section title={title} styles={styles}>
         {data.map((e, i) => (
             <View key={i}>
                 <View style={styles.rowBetween}>
@@ -209,8 +210,8 @@ const Experience = ({ data, styles }) => (
     </Section>
 );
 
-const Projects = ({ data, styles }) => (
-    <Section title="Projects" styles={styles}>
+const Projects = ({ data, styles, title = 'Projects' }) => (
+    <Section title={title} styles={styles}>
         {data.map((p, i) => (
             <View key={i}>
                 <View style={styles.rowBetween}>
@@ -228,8 +229,8 @@ const Projects = ({ data, styles }) => (
     </Section>
 );
 
-const Education = ({ data, styles }) => (
-    <Section title="Education" styles={styles}>
+const Education = ({ data, styles, title = 'Education' }) => (
+    <Section title={title} styles={styles}>
         {data.map((ed, i) => (
             <View key={i}>
                 <View style={styles.rowBetween}>
@@ -251,8 +252,8 @@ const Education = ({ data, styles }) => (
     </Section>
 );
 
-const Skills = ({ data, styles }) => (
-    <Section title="Skills" styles={styles}>
+const Skills = ({ data, styles, title = 'Skills' }) => (
+    <Section title={title} styles={styles}>
         <View style={styles.pillRow}>
             {data.map((s, i) => (
                 <Text key={i} style={styles.pill}>
@@ -263,8 +264,8 @@ const Skills = ({ data, styles }) => (
     </Section>
 );
 
-const Certificates = ({ data, styles }) => (
-    <Section title="Certifications" styles={styles}>
+const Certificates = ({ data, styles, title = 'Certifications' }) => (
+    <Section title={title} styles={styles}>
         {data.map((c, i) => (
             <View key={i}>
                 <View style={styles.rowBetween}>
@@ -278,8 +279,8 @@ const Certificates = ({ data, styles }) => (
     </Section>
 );
 
-const Languages = ({ data, styles }) => (
-    <Section title="Languages" styles={styles}>
+const Languages = ({ data, styles, title = 'Languages' }) => (
+    <Section title={title} styles={styles}>
         <View style={styles.pillRow}>
             {data.map((l, i) => (
                 <Text key={i} style={styles.pill}>
@@ -294,24 +295,51 @@ const Languages = ({ data, styles }) => (
 const Resume = ({ data }) => {
     const { contact = {}, summary, education = [], experience = [], projects = [], skills, certificates = [], languages = [] } = data;
     const styles = buildStyles(data.onePage, data.font);
+    const sections = data.sections?.length ? data.sections : DEFAULT_SECTIONS;
+
+    // Same manifest as Classic, so section order and visibility carry across templates
+    // instead of each template imposing its own.
+    const renderSection = section => {
+        const key = section.id;
+        const shared = { key, styles, title: section.title };
+
+        if (isCustomSection(key)) {
+            const entries = data.custom?.[key] || [];
+            if (!entries.length) return null;
+            return section.shape === 'compact'
+                ? <Certificates {...shared} data={entries} />
+                : <Experience {...shared} data={entries} />;
+        }
+
+        switch (key) {
+            case 'summary':
+                return summary?.summary ? (
+                    <Section key={key} title={section.title || 'Summary'} styles={styles}>
+                        <Text style={styles.summaryText}>{summary.summary}</Text>
+                    </Section>
+                ) : null;
+            case 'experience':
+                return experience.length ? <Experience {...shared} data={experience} /> : null;
+            case 'education':
+                return education.length ? <Education {...shared} data={education} /> : null;
+            case 'projects':
+                return projects.length ? <Projects {...shared} data={projects} /> : null;
+            case 'skills':
+                return skills?.items?.length ? <Skills {...shared} data={skills.items} /> : null;
+            case 'certificates':
+                return certificates.length ? <Certificates {...shared} data={certificates} /> : null;
+            case 'languages':
+                return languages.length ? <Languages {...shared} data={languages} /> : null;
+            default:
+                return null;
+        }
+    };
 
     return (
         <Document language="en">
             <Page size="A4" style={styles.page}>
                 <Header data={contact} styles={styles} />
-
-                {summary?.summary && (
-                    <Section title="Summary" styles={styles}>
-                        <Text style={styles.summaryText}>{summary.summary}</Text>
-                    </Section>
-                )}
-
-                {experience.length > 0 && <Experience data={experience} styles={styles} />}
-                {education.length > 0 && <Education data={education} styles={styles} />}
-                {projects.length > 0 && <Projects data={projects} styles={styles} />}
-                {skills?.items?.length > 0 && <Skills data={skills.items} styles={styles} />}
-                {certificates.length > 0 && <Certificates data={certificates} styles={styles} />}
-                {languages.length > 0 && <Languages data={languages} styles={styles} />}
+                {sections.filter(s => s.visible && s.id !== 'contact').map(renderSection)}
             </Page>
         </Document>
     );

@@ -6,11 +6,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setTemplate, setOnePage, setFont } from '@/store/slices/resumeSlice';
 import { usePDF } from '@react-pdf/renderer';
 import { Document, Page } from 'react-pdf';
-import { FaDownload, FaEye, FaMagnifyingGlass } from 'react-icons/fa6';
+import { FaDownload, FaEye, FaMagnifyingGlass, FaMinus, FaPlus } from 'react-icons/fa6';
 import { IoClose } from 'react-icons/io5';
 import Link from 'next/link';
 import useTranslation from '@/hooks/useTranslation';
-import Tilt3D from '@/components/UI/Tilt3D';
 import { CV_FONTS } from './fonts';
 import '@/utils/extractTextFromPdf';
 
@@ -31,10 +30,22 @@ const TEMPLATES = [
     { id: 'modern', label: 'Modern' },
 ];
 
+// The modal is the "look closely" view, so it opens magnified rather than fitted —
+// 1 is fit-to-width, and the default sits above it. Fit stays reachable, otherwise
+// a narrow screen traps you in horizontal scrolling with no way back.
+const ZOOM_FIT = 1;
+const ZOOM_MAX = 3;
+const ZOOM_STEP = 0.25;
+const ZOOM_DEFAULT = 1.35;
+
 const PreviewModal = ({ url, onClose, t }) => {
     const containerRef = useRef(null);
     const [numPages, setNumPages] = useState(0);
     const [width, setWidth] = useState(0);
+    const [zoom, setZoom] = useState(ZOOM_DEFAULT);
+
+    const nudgeZoom = delta =>
+        setZoom(z => Math.min(ZOOM_MAX, Math.max(ZOOM_FIT, Math.round((z + delta) * 100) / 100)));
 
     useEffect(() => {
         const onKey = e => e.key === 'Escape' && onClose();
@@ -68,12 +79,44 @@ const PreviewModal = ({ url, onClose, t }) => {
                 className="relative flex h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-layered-xl dark:bg-gray-900 animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2 dark:border-white/10">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">{t('preview.resumePreview')}</span>
+                <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-4 py-2 dark:border-white/10">
+                    <span className="truncate text-sm text-gray-600 dark:text-gray-300">
+                        {t('preview.resumePreview')}
+                    </span>
+
+                    <div className="ml-auto flex items-center gap-1">
+                        <button
+                            onClick={() => nudgeZoom(-ZOOM_STEP)}
+                            disabled={zoom <= ZOOM_FIT}
+                            aria-label={t('preview.zoomOut')}
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 transition-colors duration-150 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/10"
+                        >
+                            <FaMinus className="text-xs" />
+                        </button>
+                        <span className="w-11 text-center text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                            {Math.round(zoom * 100)}%
+                        </span>
+                        <button
+                            onClick={() => nudgeZoom(ZOOM_STEP)}
+                            disabled={zoom >= ZOOM_MAX}
+                            aria-label={t('preview.zoomIn')}
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 transition-colors duration-150 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/10"
+                        >
+                            <FaPlus className="text-xs" />
+                        </button>
+                        <button
+                            onClick={() => setZoom(ZOOM_FIT)}
+                            disabled={zoom === ZOOM_FIT}
+                            className="ml-1 rounded-full px-2.5 py-1 text-xs text-gray-600 transition-colors duration-150 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/10"
+                        >
+                            {t('preview.fit')}
+                        </button>
+                    </div>
+
                     <button
                         onClick={onClose}
                         aria-label="Close preview"
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10 transition-colors duration-150"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10 transition-colors duration-150"
                     >
                         <IoClose className="text-xl" />
                     </button>
@@ -85,13 +128,17 @@ const PreviewModal = ({ url, onClose, t }) => {
                             file={url}
                             loading={<Loader />}
                             onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-                            className="flex flex-col items-center gap-4"
+                            // w-max sizes the box to the zoomed page, and the auto margins
+                            // centre it only while there is room to spare — they collapse to
+                            // zero once zoomed past the container, so scrolling still reaches
+                            // the left edge. Flex centring would clip it instead.
+                            className="mx-auto flex w-max flex-col items-center gap-4"
                         >
                             {Array.from({ length: numPages }, (_, i) => (
                                 <Page
                                     key={i}
                                     pageNumber={i + 1}
-                                    width={Math.min(width, 900)}
+                                    width={Math.round(Math.min(width, 900) * zoom)}
                                     renderTextLayer={false}
                                     renderAnnotationLayer={false}
                                     className="shadow-xl"
@@ -130,12 +177,19 @@ const Preview = () => {
         return () => ro.disconnect();
     }, []);
 
-    // One effect for all three layout knobs instead of three separate ones. The
-    // mount run is kept: it is what produces the first PDF, and skipping it left
-    // the preview stuck on "No PDF file specified".
+    // Section order and visibility are layout, like the template and size knobs, so
+    // they rebuild immediately. Renames are deliberately excluded: they are text, and
+    // rebuilding the PDF on every keystroke of a heading is exactly the kind of
+    // re-render this component is careful to avoid — they land on save with everything
+    // else typed.
+    const sectionLayout = (resumeData.sections || []).map(s => `${s.id}:${s.visible ? 1 : 0}`).join('|');
+
+    // One effect for all the layout knobs instead of one each. The mount run is kept:
+    // it is what produces the first PDF, and skipping it left the preview stuck on
+    // "No PDF file specified".
     useEffect(() => {
         updateInstance(document);
-    }, [template, sizeMode, font]);
+    }, [template, sizeMode, font, sectionLayout]);
 
     // Only re-render once edits are committed — `saved` also flips to false on every
     // keystroke, which must not trigger a PDF rebuild.
@@ -161,6 +215,10 @@ const Preview = () => {
                         ))}
                     </div>
                 </div>
+
+                <p className="mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                    {t(`preview.templateNote.${template}`)}
+                </p>
 
                 <div className="mb-2.5 flex flex-wrap items-center gap-2">
                     <span className="text-sm text-gray-500 dark:text-gray-400">{t('preview.size')}</span>
@@ -198,31 +256,34 @@ const Preview = () => {
                     </div>
                 </div>
 
-                <div className="scene">
-                    <Tilt3D className="rounded-xl" angle={5}>
-                        <div
-                            className="overflow-hidden rounded-xl shadow-layered-lg"
-                            style={{ aspectRatio: '210 / 297' }}
+                <span className="mb-1.5 block text-sm text-gray-500 dark:text-gray-400">
+                    {t('preview.quickPreview')}
+                </span>
+
+                {/* Deliberately static. This sheet sits beside the form and is hovered
+                    constantly while editing, so a tilt that tracks the cursor reads as
+                    the page never settling. Full Preview is where you look closely. */}
+                <div
+                    className="overflow-hidden rounded-xl shadow-layered-lg"
+                    style={{ aspectRatio: '210 / 297' }}
+                >
+                    {instance.loading || containerWidth === 0 ? (
+                        <Loader />
+                    ) : (
+                        <Document
+                            loading={<Loader />}
+                            file={instance.url}
+                            onLoadSuccess={({ numPages }) => setMainNumPages(numPages)}
                         >
-                            {instance.loading || containerWidth === 0 ? (
-                                <Loader />
-                            ) : (
-                                <Document
-                                    loading={<Loader />}
-                                    file={instance.url}
-                                    onLoadSuccess={({ numPages }) => setMainNumPages(numPages)}
-                                >
-                                    <Page
-                                        pageNumber={1}
-                                        renderTextLayer={false}
-                                        renderAnnotationLayer={false}
-                                        loading={<Loader />}
-                                        width={containerWidth}
-                                    />
-                                </Document>
-                            )}
-                        </div>
-                    </Tilt3D>
+                            <Page
+                                pageNumber={1}
+                                renderTextLayer={false}
+                                renderAnnotationLayer={false}
+                                loading={<Loader />}
+                                width={containerWidth}
+                            />
+                        </Document>
+                    )}
                 </div>
 
                 {!instance.loading && sizeMode === 'onepage' && mainNumPages > 1 && (
@@ -240,7 +301,7 @@ const Preview = () => {
                                 onClick={() => setModalOpen(true)}
                                 className="btn flex-1 text-sm active:scale-95 transition-transform duration-100"
                             >
-                                <span>{t('preview.preview')}</span>
+                                <span>{t('preview.fullPreview')}</span>
                                 <FaEye />
                             </button>
                             <a

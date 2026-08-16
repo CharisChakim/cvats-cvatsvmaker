@@ -1,4 +1,42 @@
-export default {
+/**
+ * Shapes a user-made section can take.
+ *
+ * The field names deliberately match the built-in sections they mirror — `timeline`
+ * uses Experience's names, `compact` uses Certificates' — so the PDF templates can
+ * render a custom section through the renderer that already exists, with only the
+ * heading swapped. No mapping layer, no new renderers.
+ */
+export const CUSTOM_SHAPES = {
+    timeline: {
+        multiple: true,
+        fields: [
+            { name: 'role', label: 'Title / Role', span: true, placeholder: 'Chairperson' },
+            { name: 'company', label: 'Organization', placeholder: 'Organization name' },
+            { name: 'location', label: 'Location', placeholder: 'City, Country' },
+            { name: 'start', label: 'Start Date', type: 'month', placeholder: 'MM/YYYY' },
+            { name: 'end', label: 'End Date', type: 'month', placeholder: 'MM/YYYY', presentable: true },
+            {
+                name: 'description',
+                label: 'What you did',
+                type: 'textarea',
+                placeholder: 'Briefly describe what you did...',
+                span: true,
+                rows: 4,
+                multipoints: true,
+            },
+        ],
+    },
+    compact: {
+        multiple: true,
+        fields: [
+            { name: 'title', label: 'Title', placeholder: 'Award or publication name', span: true },
+            { name: 'issuer', label: 'Issuer / Publisher', placeholder: 'Organization name' },
+            { name: 'date', label: 'Date', type: 'month', placeholder: 'MM/YYYY' },
+        ],
+    },
+};
+
+const ResumeFields = {
     contact: {
         name: 'Contact',
         fields: [
@@ -140,4 +178,23 @@ export default {
             },
         ],
     },
+};
+
+export default ResumeFields;
+
+/**
+ * A section's display name: whatever the user renamed it to, otherwise the
+ * translated default. Lives here rather than in Tabs so the tab strip, the editor
+ * header and the section manager can all share it without importing each other.
+ */
+export const sectionLabel = (section, t) =>
+    section.title || (ResumeFields[section.id] ? t(`tabs.${section.id}`) : section.id);
+
+/** Field config for a section entry, whether it is built-in or user-made. */
+export const sectionFields = section => {
+    if (!section) return null;
+    if (String(section.id).startsWith('custom-')) {
+        return CUSTOM_SHAPES[section.shape] || CUSTOM_SHAPES.timeline;
+    }
+    return ResumeFields[section.id] || null;
 };

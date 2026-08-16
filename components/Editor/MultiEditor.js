@@ -2,8 +2,8 @@
 
 import { useDispatch, useSelector } from 'react-redux';
 import Input from '../UI/Input';
-import { addNewIndex, deleteIndex, moveIndex, updateResumeValue } from '@/store/slices/resumeSlice';
-import ResumeFields from '@/config/ResumeFields';
+import { addNewIndex, deleteIndex, moveIndex, updateResumeValue, isCustomSection } from '@/store/slices/resumeSlice';
+import { sectionFields } from '@/config/ResumeFields';
 import { LuPlus } from 'react-icons/lu';
 import { useState } from 'react';
 import { FaArrowUp, FaPencil, FaTrash } from 'react-icons/fa6';
@@ -12,10 +12,13 @@ import { TbArrowsMinimize } from 'react-icons/tb';
 import useTranslation, { useLocalizeField } from '@/hooks/useTranslation';
 
 const MultiEditor = ({ tab }) => {
-    const { fields } = ResumeFields[tab];
+    const section = useSelector(state => state.resume.sections.find(s => s.id === tab));
+    const { fields } = sectionFields(section) || { fields: [] };
     const [selectedCard, setSelectedCard] = useState(null);
     const dispatch = useDispatch();
-    const resumeData = useSelector(state => state.resume[tab]);
+    const resumeData = useSelector(state =>
+        isCustomSection(tab) ? state.resume.custom[tab] || [] : state.resume[tab],
+    );
     const t = useTranslation();
     const localizeField = useLocalizeField(tab);
 
@@ -25,7 +28,7 @@ const MultiEditor = ({ tab }) => {
     };
 
     const addNew = () => {
-        dispatch(addNewIndex({ tab, name: 'degree', value: 'new' }));
+        dispatch(addNewIndex({ tab }));
         setSelectedCard(resumeData.length);
     };
 

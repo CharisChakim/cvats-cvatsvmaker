@@ -2,8 +2,9 @@ import { StyleSheet, Text, View } from '@react-pdf/renderer';
 
 const Section = ({ title, children, compact }) => {
     const styles = StyleSheet.create({
+        // Title case, not caps: the Harvard College template this layout follows writes
+        // "Education" and "Experience" as-is, and ATS parsers read either the same way.
         section_title: {
-            textTransform: 'uppercase',
             color: '#000000',
             fontSize: compact ? 11 : 13,
         },

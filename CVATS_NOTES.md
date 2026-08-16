@@ -29,7 +29,7 @@ File ini dibuat khusus agar saya (Claude) bisa langsung memahami konteks proyek 
 
 | Route | Fungsi |
 |---|---|
-| `POST /api/parse` | Terima teks CV mentah → parse ke struktur JSON via AI |
+| `POST /api/parse` | Terima teks CV mentah → parse ke struktur JSON via AI. **Fallback saja** — lihat "Parsing hybrid" di bawah |
 | `POST /api/score` | Terima cvText + jobText/jobImageBase64 → kembalikan skor ATS JSON |
 | `POST /api/boost-cv` | Terima cvText + jobText + mode → kembalikan teks CV yang dioptimasi. mode: `safe` \| `gap-advisor` |
 | `POST /api/analyze-gaps` | Terima cvText + jobText → kembalikan `{ experienceQuestions, confirmableSkills, keywordGaps, certificationGaps }` |
@@ -54,20 +54,66 @@ File: `store/slices/resumeSlice.js`
   certificates: [{ title, issuer, date }],
   languages: [{ language, proficiency }],
 
+  // Manifest urutan + visibilitas section. Data section bawaan TETAP di slot
+  // top-level masing-masing di atas — ini hanya mengatur urutan & tampil/tidak.
+  sections: [{ id, visible, title?, shape? }],
+  custom: { 'custom-1': [ ...entries ] },   // data section buatan user
+
   template: 'classic' | 'modern',
-  onePage: false,   // compact mode
+  onePage: 'normal' | 'compact' | 'onepage',
+  font: 'Carlito' | 'Helvetica' | 'Times',
   saved: false,     // PDF re-render dipicu saat true
   lang: 'en' | 'id',
+
+  parsedBy: null | 'local' | 'ai',   // jalur parse terakhir (tidak dipersist)
+  parseSourceText: '',               // teks sumber utk "baca ulang dengan AI" (tidak dipersist)
 }
 ```
 
 **Actions penting:**
 - `updateResumeValue({ tab, name, value, index })` — update satu field
-- `setFullResume(data)` — replace semua data resume (dipakai setelah parse/boost)
+- `setFullResume(data)` — replace semua data resume (dipakai setelah parse/boost).
+  Payload parse tidak pernah berisi `sections`/`custom`, jadi keduanya selamat.
 - `saveResume()` — set `saved: true`, memicu PDF re-render
-- `setTemplate(id)` — ganti template
-- `setOnePage(bool)` — toggle compact mode
+- `setTemplate(id)` / `setOnePage(mode)` / `setFont(id)` — knob layout, langsung re-render
 - `setLang('en'|'id')` — ganti bahasa UI
+- `hydrateResume(saved)` — dipakai sekali oleh `ReduxProvider` saat mount (lihat peringatan di bawah)
+- `setParseMeta({ parsedBy, sourceText })` — catat jalur parse
+- `addSection({ title, shape })` / `removeSection(id)` / `renameSection({ id, title })` /
+  `toggleSectionVisible(id)` / `moveSection({ id, dir })` — kelola section
+
+Helper yang diekspor: `DEFAULT_RESUME`, `DEFAULT_SECTIONS`, `isCustomSection(id)`.
+
+---
+
+## ⚠️ State DIPERSIST ke localStorage — dan dimuat SETELAH mount
+
+`store/index.js` menyimpan seluruh state ke `localStorage['reduxState']` (debounce 2,5
+detik). Yang perlu diperhatikan adalah cara **memuatnya kembali**.
+
+State tersimpan **sengaja tidak dipasang lewat `preloadedState`**. Server tidak punya
+localStorage, jadi kalau dipasang di situ: server merender default kosong sementara
+client merender CV tersimpan → seluruh pohon gagal hydrate. Gejalanya beruntun dan
+membingungkan ("Text content did not match", "Expected server HTML to contain
+a matching `<a>`") dan React membuang hasil SSR lalu merender ulang semuanya di client.
+
+Alurnya sekarang: `store/index.js` mengekspor `loadPersistedResume()`, dan
+`ReduxProvider` memanggilnya di `useEffect` lalu men-dispatch `hydrateResume(saved)`.
+Server dan render pertama client sama-sama mulai dari `DEFAULT_RESUME`, jadi cocok;
+data asli masuk di render berikutnya.
+
+**Kalau menambah key baru ke state resume:** tidak perlu tindakan tambahan — reducer
+`hydrateResume` sudah men-merge di atas `DEFAULT_RESUME`. Tapi jangan pernah
+memindahkan pemuatan itu kembali ke `preloadedState`.
+
+**Konsekuensi umum:** komponen apa pun yang merender state persisted akan berbeda
+antara server dan render pertama client. Kalau kelak ada state client-only lain
+(mis. dari `localStorage` langsung), pakai mounted-guard seperti di
+`components/Editor/ParseNotice.js`.
+
+`parsedBy` dan `parseSourceText` sengaja dibuang saat menyimpan: yang satu bisa
+beberapa KB teks CV duplikat, yang lain akan memunculkan notice usang berhari-hari
+kemudian.
 
 ---
 
@@ -112,12 +158,93 @@ OPENROUTER_MODEL     (opsional, override model pertama)
 
 ---
 
+## Parsing hybrid — rule-based dulu, AI kalau perlu
+
+`utils/parseResumeLocal.js` membaca CV berformat konvensional tanpa memanggil AI.
+Dipanggil **client-side** sebelum `fetch`, jadi CV yang lolos tidak menyentuh jaringan
+sama sekali dan tidak memakan rate limit.
+
+Dua titik pemanggilan: `app/(Home)/page.js` (upload PDF) dan `app/scoring/page.js`
+(`handleAcceptBoost`, re-parse setelah accept boost). Jalur boost hampir selalu lolos
+karena teksnya output `serializeCv` yang ditulis ulang AI, dan `validateFn` di
+`boost-cv` sudah memaksa heading ALL-CAPS tetap utuh.
+
+`parseResumeLocal(text)` → `{ data, confident, reasons, coverage }`. `data` berbentuk
+**persis** seperti `mapToAppSchema` di route parse, jadi pemanggil tidak perlu
+bercabang. Fallback ke AI kecuali **semua** terpenuhi: ≥2 heading dikenali, ada
+nama/email, ≥1 entry experience/education bertanggal, dan **≥60% karakter input
+terserap** (pengaman utama melawan parse yang diam-diam membuang separuh CV).
+
+**Penting — parser menerima teks MENTAH, bukan hasil `cleanPdfText`.** `cleanPdfText`
+membuang non-ASCII, yang ikut menghapus `•` dan `–` — persis karakter yang dipakai
+untuk mendeteksi bullet dan rentang tanggal. Jalur AI tetap pakai versi bersih.
+
+Setelah parse lokal, `components/Editor/ParseNotice.js` menampilkan strip
+"Dibaca instan, tanpa AI" + tombol baca-ulang-dengan-AI. Hasil rule-based yang salah
+tapi senyap lebih buruk daripada parse AI yang lambat.
+
+`utils/extractTextFromPdf.js` merekonstruksi baris dari koordinat text item
+(`transform[5]` untuk baris, `transform[4]` untuk urutan kiri→kanan, gap vertikal
+besar → baris kosong). Versi lama menggabungkan **semua** item dengan spasi sehingga
+struktur baris hilang total; tanpa ini parsing rule-based mustahil.
+
+---
+
 ## PDF Generation
 
 - Template dirender dengan `@react-pdf/renderer`
 - Dua template: **Classic** (`components/Resume/pdf/Classic.js`) dan **Modern** (`components/Resume/pdf/Modern.js`)
 - `PreviewInner.js` di-load dengan `dynamic({ ssr: false })` karena `usePDF` hanya jalan di browser
-- PDF di-render ulang hanya saat `resumeData.saved === true` atau saat template/onePage berubah
+- **Urutan section datang dari `state.sections`, bukan hardcode di template.** Kedua
+  template mengiterasi manifest yang sama, jadi urutan & visibilitas konsisten lintas
+  template. Section custom dirender lewat renderer bawaan yang sudah ada —
+  `shape: 'timeline'` pakai renderer Experience, `shape: 'compact'` pakai Certificates.
+- PDF di-render ulang saat `resumeData.saved === true`, atau saat template / onePage /
+  font / **urutan-visibilitas section** berubah. Rename section sengaja TIDAK memicu
+  re-render (itu teks, bukan layout — kalau tidak, tiap ketukan tombol me-rebuild PDF).
+
+### Classic mengikuti struktur template Harvard College
+
+Diverifikasi terhadap template resmi Harvard College (Bullet Points) dan panduan
+resminya:
+
+- Institusi/perusahaan **tebal di kiri** dengan **lokasi rata kanan**; degree/role
+  **miring di kiri** dengan **tanggal rata kanan** (dulu terbalik)
+- Skills sebagai teks dipisah koma — **bukan** pill berlatar abu-abu. Harvard menulis
+  skills sebagai baris teks berlabel, dan panduan ATS eksplisit melarang kotak/tabel/grid
+- Kontak di tengah dipisah `•`, termasuk alamat
+- Heading Title Case (template Harvard menulis "Education", bukan "EDUCATION")
+- Padding halaman normal 36pt = 0,5 inci, ambang aman ATS. `compact`/`onepage` sengaja
+  lebih sempit — itu memang trade-off yang diminta user
+- Summary tetap dirender kalau diisi, walau template Harvard tidak punya section itu —
+  data user tidak boleh dibuang. Karena itu caption berbunyi "mengikuti struktur",
+  bukan "identik"
+
+Font yang ditawarkan (`components/Resume/fonts.js`) semuanya ada di daftar ATS-safe.
+Courier pernah ada dan sudah dibuang (monospace, tidak lazim untuk CV); `getFontSet`
+jatuh ke Carlito untuk id yang tidak dikenal.
+
+---
+
+## Section yang bisa diatur user
+
+Panduan Harvard menyuruh "list headings **in order of importance**" — urutan hardcode
+yang lama justru menghalanginya. Sekarang user bisa mengurutkan, menyembunyikan,
+mengganti nama, dan menambah section sendiri lewat `components/Editor/SectionManager.js`
+(tombol di ujung strip tab).
+
+- **Default tidak berubah** dari versi lama: semua section bawaan tampil dalam urutan
+  yang sama. Fleksibilitas bersifat opt-in
+- `contact` terkunci di posisi 0 — itu header CV, bukan section
+- Section custom punya `shape`: `timeline` (field sama dengan experience) atau
+  `compact` (field sama dengan certificates). Nama fieldnya sengaja dibuat identik
+  dengan section bawaan supaya renderer PDF & editor tidak perlu mapping apa pun
+- Judul yang tidak dikenali ATS memunculkan peringatan halus, bukan larangan
+  (`isRecognizedHeading` di `parseResumeLocal.js`). Preset judul yang aman ditawarkan
+  lebih dulu
+- Section bawaan juga bisa di-rename (mis. "Experience" → "Pengalaman Kerja")
+- **`serializeCv` wajib ikut manifest** — kalau tidak, scoring & boost buta terhadap
+  section custom dan tetap melihat section yang sudah disembunyikan
 
 ---
 
@@ -125,7 +252,7 @@ OPENROUTER_MODEL     (opsional, override model pertama)
 
 - Semua teks UI ada di `lib/translations.js` — satu objek besar `{ en: {...}, id: {...} }`
 - Hook `useTranslation()` (`hooks/useTranslation.js`) — baca `lang` dari Redux, return fungsi `t('key.nested')`
-- Ganti bahasa via `setLang` action, tersimpan di Redux state (in-memory, hilang saat refresh)
+- Ganti bahasa via `setLang` action; ikut tersimpan ke localStorage bersama state lain, jadi pilihan bahasa bertahan setelah refresh
 - Komponen `LangToggle.js` di header
 
 ---
@@ -166,15 +293,17 @@ Setelah accept boost → `/api/parse` lagi dari teks yang sudah di-boost → val
 
 | File | Fungsi |
 |---|---|
-| `utils/serializeCv.js` | Konversi Redux state → plain text untuk dikirim ke AI (scoring/boost) |
-| `utils/cleanPdfText.js` | Bersihkan teks hasil ekstrak PDF (hapus noise) |
+| `utils/parseResumeLocal.js` | **Parser rule-based** — baca CV tanpa AI + skor keyakinan. Juga ekspor `isRecognizedHeading` untuk peringatan ATS di section manager |
+| `utils/extractTextFromPdf.js` | Ekstrak teks PDF **dengan struktur baris** direkonstruksi dari koordinat |
+| `utils/serializeCv.js` | Konversi Redux state → plain text untuk dikirim ke AI (scoring/boost). Mengikuti urutan `sections` + menyertakan section custom |
+| `utils/cleanPdfText.js` | Bersihkan teks hasil ekstrak PDF (hapus noise). **Membuang non-ASCII** — jangan suapkan hasilnya ke `parseResumeLocal` |
 | `utils/aiCache.js` | Cache localStorage 24h untuk hasil scoring |
 | `utils/jobHistory.js` | Session history untuk input job (text/url/screenshot) |
 | `utils/scoringLogic.js` | **Code-based scoring** — `scoreKeywords`, `scoreSkills`, `computeOverallScore` |
 | `lib/callAI.js` | Multi-provider AI caller dengan fallback |
 | `lib/aiModels.js` | Daftar model AI terpusat — semua route import dari sini |
 | `lib/translations.js` | Semua string UI dalam EN dan ID |
-| `config/ResumeFields.js` | Definisi fields per tab editor (nama, type, label, validasi) |
+| `config/ResumeFields.js` | Definisi fields per tab editor + `CUSTOM_SHAPES`, `sectionFields()`, `sectionLabel()` |
 
 ---
 
@@ -189,16 +318,33 @@ Field di `config/ResumeFields.js` punya properti:
 - `multipoints: true` — textarea untuk bullet points, tiap baris = satu bullet di PDF
 - `span: true` — field full width di grid
 
+**Section custom** memakai `CUSTOM_SHAPES` di file yang sama. Nama fieldnya sengaja
+sama dengan section bawaan yang ditirunya (`timeline` → nama field experience,
+`compact` → nama field certificates), supaya renderer PDF dan editor bisa dipakai
+ulang apa adanya tanpa lapisan mapping.
+
 ---
 
 ## Pola-pola yang Perlu Diperhatikan
 
-1. **PDF re-render mahal** — jangan trigger `updateInstance` sembarangan; trigger hanya via `saved`, `template`, atau `onePage`.
+1. **PDF re-render mahal** — jangan trigger `updateInstance` sembarangan; trigger hanya via `saved` atau knob layout (`template`, `onePage`, `font`, urutan/visibilitas `sections`). Jangan tambahkan sesuatu yang berubah tiap ketukan tombol.
 2. **AI JSON parse rapuh** — selalu pakai `extractJson()` dari `callAI.js`, bukan `JSON.parse` langsung. AI kadang kembalikan JSON di dalam markdown fences.
 3. **Model OpenRouter sering ignore `response_format: json_object`** — itulah kenapa `extractJson` perlu parsing manual dengan sanitasi.
 4. **`skills.items` adalah array string**, berbeda dengan section lain yang array of objects.
 5. **`description` di experience/projects** — disimpan sebagai satu string multiline (`\n`-separated), masing-masing baris jadi satu bullet di PDF.
-6. **Preview PDF** hanya tampilkan halaman 1; preview modal tampilkan semua halaman.
+6. **Quick preview** (sidebar) hanya tampilkan halaman 1 dan sengaja diam — tidak ada efek tilt, karena sheet itu di-hover terus saat mengedit. **Full Preview** (modal) tampilkan semua halaman, buka pada 1,35× lebar-fit, dengan kontrol −/+/Fit.
+
+---
+
+## Struktur Komponen Editor (`components/Editor/`)
+
+| File | Isi |
+|---|---|
+| `index.js` | Shell kartu editor — resolve tab ke config lewat `sectionFields()`, pilih Single/MultiEditor |
+| `SingleEditor.js` | Section field tunggal (contact, summary, skills) |
+| `MultiEditor.js` | Section berisi banyak entry; membaca `state.resume.custom[tab]` untuk section custom |
+| `SectionManager.js` | Modal kelola section — urut naik/turun, toggle tampil, rename, tambah/hapus, peringatan heading non-standar |
+| `ParseNotice.js` | Strip "dibaca tanpa AI" + tombol baca ulang dengan AI. Pakai mounted-guard karena `parsedBy` hanya ada di client |
 
 ---
 
@@ -253,5 +399,5 @@ Setelah refactor (Mei 2026), komponen scoring dipecah:
 - **mapToAppSchema** selalu strip karakter bullet di awal tiap baris experience/project content (`cleanBulletLines`). Ini mencegah double-bullet "• •" di PDF jika AI menyertakan bullet meski sudah dilarang.
 - **skills.items** diisi dari `skills.content` yang di-split oleh `/[\n,;|·•]+/` — **tidak** include spasi, karena multi-word skill ("Data Visualization") harus tetap satu item. AI diarahkan return comma-separated via prompt.
 - Setelah accept boost → navigate ke `/editor` untuk lihat PDF preview
-- Tidak ada authentication/database — semua state in-memory (Redux) + localStorage
+- Tidak ada authentication/database — state ada di Redux dan dipersist ke localStorage (lihat peringatan di bagian State Management)
 - Google Analytics sudah terpasang (`G-WPXWXJ9MC2`)

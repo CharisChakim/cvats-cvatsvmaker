@@ -1,6 +1,6 @@
 'use client';
 
-import ResumeFields from '@/config/ResumeFields';
+import { sectionFields, sectionLabel } from '@/config/ResumeFields';
 import { FaSave } from 'react-icons/fa';
 import {
     FaUser,
@@ -11,10 +11,11 @@ import {
     FaCode,
     FaCertificate,
     FaEarthAmericas,
+    FaLayerGroup,
 } from 'react-icons/fa6';
 import SingleEditor from './SingleEditor';
 import MultiEditor from './MultiEditor';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { saveResume } from '@/store/slices/resumeSlice';
 import { useEffect } from 'react';
 import useTranslation from '@/hooks/useTranslation';
@@ -31,11 +32,11 @@ const TAB_META = {
 };
 
 const Editor = ({ tab }) => {
-    const { multiple } = ResumeFields[tab];
+    const section = useSelector(state => state.resume.sections.find(s => s.id === tab));
     const dispatch = useDispatch();
     const t = useTranslation();
     const meta = TAB_META[tab];
-    const Icon = meta?.icon;
+    const Icon = meta?.icon || FaLayerGroup;
 
     const save = e => {
         e?.preventDefault();
@@ -46,6 +47,17 @@ const Editor = ({ tab }) => {
         const interval = setInterval(save, 10000);
         return () => clearInterval(interval);
     }, []);
+
+    // A hidden or deleted section can still be reached by its old URL.
+    if (!section) {
+        return (
+            <div className="card my-8 py-16 text-center text-sm text-gray-500 dark:text-gray-400">
+                {t('sections.notFound')}
+            </div>
+        );
+    }
+
+    const { multiple } = sectionFields(section) || {};
 
     return (
         <>
@@ -58,10 +70,10 @@ const Editor = ({ tab }) => {
                     )}
                     <div>
                         <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">
-                            {t(`tabs.${tab}`)}
+                            {sectionLabel(section, t)}
                         </h2>
                         <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                            {t(meta?.descKey)}
+                            {meta ? t(meta.descKey) : t('sections.customDesc')}
                         </p>
                     </div>
                 </div>

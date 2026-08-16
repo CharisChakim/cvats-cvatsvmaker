@@ -5,13 +5,14 @@ import { FaCloudUploadAlt } from 'react-icons/fa';
 import { FaMagnifyingGlass, FaArrowRight } from 'react-icons/fa6';
 import { useRef, useState, useTransition } from 'react';
 import { useDispatch } from 'react-redux';
-import { setFullResume } from '@/store/slices/resumeSlice';
+import { setFullResume, setParseMeta } from '@/store/slices/resumeSlice';
 import { useRouter } from 'next/navigation';
 import { CgSpinner } from 'react-icons/cg';
 import UploadProgress from '@/components/UploadProgress';
 import useTranslation from '@/hooks/useTranslation';
 import { cleanPdfText } from '@/utils/cleanPdfText';
 import { extractTextFromPDF } from '@/utils/extractTextFromPdf';
+import { parseResumeLocal } from '@/utils/parseResumeLocal';
 import Tilt3D from '@/components/UI/Tilt3D';
 import CvPreviewArt from '@/components/CvPreviewArt';
 import RouteOverlay from '@/components/RouteOverlay';
@@ -100,6 +101,19 @@ const page = () => {
                 throw new Error(t('hero.uploadNoText'));
             }
 
+            // Conventionally formatted CVs can be read outright. Skipping the model
+            // saves the wait, the cost, and a slot in the parse rate limit. The local
+            // parser gets rawText, not the cleaned copy — cleanPdfText strips
+            // non-ASCII, which takes the bullets and en-dashes it reads structure from.
+            const local = parseResumeLocal(rawText);
+            if (local.confident) {
+                setStage('editor');
+                dispatch(setFullResume(local.data));
+                dispatch(setParseMeta({ parsedBy: 'local', sourceText: text }));
+                router.push('/editor');
+                return;
+            }
+
             setStage('parse');
             const response = await fetch('/api/parse', {
                 method: 'POST',
@@ -116,6 +130,7 @@ const page = () => {
 
             setStage('editor');
             dispatch(setFullResume(data));
+            dispatch(setParseMeta({ parsedBy: 'ai', sourceText: text }));
             router.push('/editor');
         } catch (error) {
             if (error.name === 'AbortError') {

@@ -12,9 +12,13 @@ const buildStyles = (sizeMode, fontId) => {
 
     return StyleSheet.create({
         page: {
+            // Points, so 72 is one inch. ATS guidance puts the safe floor at half an
+            // inch, which normal now meets — it previously sat under it at 30. Compact
+            // and one-page stay tighter on purpose: they exist to trade margin for
+            // fitting the page, and that is the user asking for it.
             backgroundColor: '#ffffff',
             color: TEXT,
-            padding: onePage ? 14 : compact ? 20 : 30,
+            padding: onePage ? 14 : compact ? 20 : 36,
             fontFamily: f.regular,
         },
 
@@ -34,8 +38,11 @@ const buildStyles = (sizeMode, fontId) => {
             fontSize: compact ? 9.5 : 11,
             display: 'flex',
             flexDirection: 'row',
+            flexWrap: 'wrap',
             justifyContent: 'center',
-            gap: compact ? 10 : 14,
+            // Tighter than before because the items now carry "•" separators between
+            // them, the way the Harvard template writes its contact line.
+            gap: compact ? 4 : 6,
             marginTop: compact ? 4 : 6,
             marginBottom: compact ? 2 : 4,
         },
@@ -59,6 +66,14 @@ const buildStyles = (sizeMode, fontId) => {
         title: {
             fontFamily: f.bold,
             fontWeight: 'bold',
+            marginRight: 'auto',
+            color: TEXT,
+        },
+        // The Harvard row is organisation (bold) over degree/role (italic); this is the
+        // second line, which used to be plain text.
+        subtitle: {
+            fontFamily: f.italic,
+            fontStyle: 'italic',
             marginRight: 'auto',
             color: TEXT,
         },

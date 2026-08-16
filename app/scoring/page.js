@@ -12,7 +12,8 @@ import { serializeCv } from '@/utils/serializeCv';
 import { cleanPdfText } from '@/utils/cleanPdfText';
 import { extractTextFromPDF } from '@/utils/extractTextFromPdf';
 import { cacheGet, cacheSet } from '@/utils/aiCache';
-import { setFullResume, saveResume } from '@/store/slices/resumeSlice';
+import { parseResumeLocal } from '@/utils/parseResumeLocal';
+import { setFullResume, saveResume, setParseMeta } from '@/store/slices/resumeSlice';
 import JobInput from '@/components/Scoring/JobInput';
 import ScoreResults from '@/components/Scoring/ScoreResults';
 import { ScoringLoader, BoostLoader, GapAdvisorLoader } from '@/components/Scoring/ScoringLoaders';
@@ -263,13 +264,26 @@ const ScoringPage = () => {
         setApplyingBoost(true);
         setError('');
         try {
-            const res = await fetch('/api/parse', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: boostedCvText }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Failed to apply boost');
+            // The boosted text is our own serialised CV rewritten by the model, and
+            // boost-cv's validateFn already guarantees the ALL-CAPS headings survive —
+            // so this almost always reads cleanly without a second AI round trip.
+            const local = parseResumeLocal(boostedCvText);
+            let data;
+            let parsedBy = 'local';
+
+            if (local.confident) {
+                data = local.data;
+            } else {
+                parsedBy = 'ai';
+                const res = await fetch('/api/parse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: boostedCvText }),
+                });
+                data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to apply boost');
+            }
+
             const hasMinimumContent =
                 (data.experience?.length > 0) ||
                 (data.skills?.items?.length > 0) ||
@@ -278,6 +292,7 @@ const ScoringPage = () => {
                 throw new Error(t('scoring.boostParseIncomplete'));
             }
             dispatch(setFullResume(data));
+            dispatch(setParseMeta({ parsedBy, sourceText: boostedCvText }));
             dispatch(saveResume());
             router.push('/editor');
         } catch (err) {
