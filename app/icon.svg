@@ -1,9 +1,10 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Read at 16px, so the monogram is reversed out of a solid tile: the open
-       outline version loses its counters at that size. Here the tile colour is
-       known, so the letters can be separated with a plain knockout. -->
-  <rect width="64" height="64" rx="15" fill="#1F6F4A"/>
-  <path d="M44 18.5A19 19 0 1 0 44 45.5" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
-  <path d="M23 24 33.5 46 44 24" stroke="#1F6F4A" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M23 24 33.5 46 44 24" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Tuned for 16-32px, the only range a favicon is actually seen at. The glyph
+       fills more of the tile and carries heavier strokes than the header mark:
+       at 16px the header's proportions collapse into an unreadable smudge.
+       Large renderings are the header Logo component's job, not this file's. -->
+  <rect width="64" height="64" rx="14" fill="#1F6F4A"/>
+  <path d="M47 16A22 22 0 1 0 47 48" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round"/>
+  <path d="M20 21 32.5 49 45 21" stroke="#1F6F4A" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M20 21 32.5 49 45 21" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
