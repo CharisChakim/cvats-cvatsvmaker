@@ -191,7 +191,9 @@ const page = () => {
                 {/* ── How it works — genuinely ordered, so the numbers mean something ── */}
                 <section className="border-y" style={{ borderColor: 'var(--hairline)' }}>
                     <div className="mx-auto max-w-screen-xl px-5 py-14 md:py-20 2xl:max-w-screen-2xl">
-                        <h2 className="max-w-lg text-xl font-semibold tracking-[-0.02em] text-ink md:text-2xl">
+                        {/* Type runs on a 1.2 ratio: 12 label · 15 body · 18 title · 28 heading.
+                            Title and body were previously 16/14, too close to read as two levels. */}
+                        <h2 className="max-w-xl text-2xl font-semibold tracking-[-0.022em] text-ink md:text-[1.75rem] md:leading-[1.2]">
                             {t('hero.howTitle')}
                         </h2>
 
@@ -208,8 +210,12 @@ const page = () => {
                                     <span className="font-mono text-xs font-semibold tabular-nums text-primary-400">
                                         {String(i + 1).padStart(2, '0')}
                                     </span>
-                                    <h3 className="mt-4 text-base font-semibold text-ink">{t(`hero.${key}Title`)}</h3>
-                                    <p className="mt-2 text-sm leading-relaxed text-ink-soft">{t(`hero.${key}Body`)}</p>
+                                    <h3 className="mt-4 text-lg font-semibold tracking-[-0.015em] text-ink">
+                                        {t(`hero.${key}Title`)}
+                                    </h3>
+                                    <p className="mt-2.5 text-[0.9375rem] leading-[1.6] text-ink-soft">
+                                        {t(`hero.${key}Body`)}
+                                    </p>
                                 </li>
                             ))}
                         </ol>
@@ -218,10 +224,12 @@ const page = () => {
 
                 {/* ── Close ────────────────────────────────────────────────── */}
                 <section className="mx-auto max-w-screen-xl px-5 py-16 text-center md:py-24 2xl:max-w-screen-2xl">
-                    <h2 className="mx-auto max-w-xl text-2xl font-semibold tracking-[-0.025em] text-ink text-balance md:text-3xl">
+                    <h2 className="mx-auto max-w-xl text-2xl font-semibold tracking-[-0.025em] text-ink text-balance md:text-[2.125rem] md:leading-[1.15]">
                         {t('hero.closeTitle')}
                     </h2>
-                    <p className="mx-auto mt-4 max-w-md text-sm text-ink-soft md:text-base">{t('hero.closeBody')}</p>
+                    <p className="mx-auto mt-4 max-w-md text-[0.9375rem] leading-[1.6] text-ink-soft md:text-lg">
+                        {t('hero.closeBody')}
+                    </p>
                     <button onClick={() => go('/editor')} disabled={busy} className="btn-filled mx-auto mt-8">
                         <span>{t('hero.startBtn')}</span>
                         <FaArrowRight className="text-sm" />
