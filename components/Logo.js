@@ -1,60 +1,56 @@
+'use client';
+
+import { useId } from 'react';
+
 /**
- * C-VATS mark: a sheet of paper with a screener's approval cut into it.
- * Monoline and inlined rather than an <img>, so the sheet inherits the ink
- * colour of whatever theme is active while the check keeps its accent green.
+ * C-VATS monogram, built the way the VOC mark was: two letters sharing one
+ * composition rather than sitting side by side. The C and V interlock, and
+ * conveniently spell the thing the product makes.
+ *
+ * Where the V crosses the C, the C is masked away rather than covered by a
+ * knockout in the background colour — the header sits on a translucent
+ * material, so any solid knockout would show as a mismatched sliver.
  */
-const Logo = ({ size = 34, className = '' }) => (
-    <svg
-        width={size}
-        height={size}
-        viewBox="0 0 40 40"
-        fill="none"
-        aria-hidden="true"
-        className={className}
-    >
-        {/* Sheet with a folded top corner */}
-        <path
-            d="M8.5 6.2a2 2 0 0 1 2-2h9.9L27.5 11v8.3"
-            stroke="currentColor"
-            strokeWidth="2.1"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-        <path
-            d="M8.5 6.2v27.6a2 2 0 0 0 2 2h6.6"
-            stroke="currentColor"
-            strokeWidth="2.1"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-        <path
-            d="M20.4 4.2V11h7.1"
-            stroke="currentColor"
-            strokeWidth="2.1"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
+const Logo = ({ size = 30, className = '' }) => {
+    const maskId = useId();
 
-        {/* Rules — the résumé's content, de-emphasised */}
-        <path
-            d="M13.4 16.2h9M13.4 21.4h6.2"
-            stroke="currentColor"
-            strokeWidth="2.1"
-            strokeLinecap="round"
-            opacity="0.38"
-        />
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 64 64"
+            fill="none"
+            aria-hidden="true"
+            className={className}
+        >
+            <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+                <rect width="64" height="64" fill="white" />
+                {/* Fattened V carves the breathing room out of the C */}
+                <path
+                    d="M21 23 33.5 48 46 23"
+                    stroke="black"
+                    strokeWidth="13"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+            </mask>
 
-        {/* Approval mark, sitting proud of the sheet's corner */}
-        <circle cx="27.6" cy="27.6" r="9.1" className="fill-paper" />
-        <circle cx="27.6" cy="27.6" r="7.4" className="fill-primary-400" />
-        <path
-            d="m24.1 27.7 2.5 2.5 5-5.3"
-            stroke="rgb(var(--paper-raised))"
-            strokeWidth="2.3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-    </svg>
-);
+            <path
+                d="M45 16.5A21.5 21.5 0 1 0 45 47.5"
+                stroke="currentColor"
+                strokeWidth="7.5"
+                strokeLinecap="round"
+                mask={`url(#${maskId})`}
+            />
+            <path
+                d="M21 23 33.5 48 46 23"
+                className="stroke-primary-400"
+                strokeWidth="7.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+};
 
 export default Logo;
