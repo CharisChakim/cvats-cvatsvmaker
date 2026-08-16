@@ -1,6 +1,5 @@
 <div align="center">
-  <img src="./app/icon.svg" width="64" height="64" alt="C-VATS logo" />
-  <h1>C-VATS</h1>
+  <img src="./public/banner.jpg" width="100%" alt="C-VATS — CV ATS Maker and AI match scoring" />
   <p><strong>Your CV is read by software before a person ever sees it.</strong></p>
   <p>C-VATS scores your CV against the job you are actually applying for, shows you which requirements it never mentions, and helps you write them in — then exports a PDF that parsers can read cleanly.</p>
   <p>No account. Nothing stored on our servers. Free to use.</p>
@@ -65,8 +64,8 @@
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/CharisChakim/cvats-cvatsvmaker.git
-   cd cvats-cvatsvmaker
+   git clone https://github.com/CharisChakim/c-vats.git
+   cd c-vats
    ```
 
 2. Install dependencies:

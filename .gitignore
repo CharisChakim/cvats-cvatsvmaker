@@ -48,3 +48,5 @@ CVATS_NOTES.md
 # local scripts
 generate-sample.js
 run-cvats-demo.js
+# Source artwork — the web-sized export lives at public/banner.jpg
+logo.jpg
