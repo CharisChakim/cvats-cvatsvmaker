@@ -14,7 +14,7 @@ export const metadata = {
     // over the configured SVG, which is why the tab kept showing the stale mark.
     openGraph: {
         title: 'C-VATS',
-        images: `/banner.jpg`,
+        images: `/banner.png`,
         type: 'website',
     },
     alternates: {

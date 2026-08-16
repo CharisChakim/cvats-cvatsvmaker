@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="C-VATS — your CV is read by software before a person ever sees it">
+  <defs>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="sheetClip">
+      <rect x="726" y="132" width="330" height="400" rx="8"/>
+    </clipPath>
+    <filter id="lift" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="26" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <!-- Ink ground: self-contained, so it holds on either GitHub theme -->
+  <rect width="1200" height="630" fill="#181816"/>
+
+  <!-- Faint rule grid, the ledger the scorer reads against -->
+  <g stroke="#F0EEE9" stroke-opacity="0.045" stroke-width="1">
+    <path d="M0 158.5h1200M0 314.5h1200M0 470.5h1200"/>
+  </g>
+
+  <!-- ── Left: wordmark and promise ───────────────────────────────────── -->
+  <text x="96" y="196" fill="#6EC89C" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif"
+        font-size="19" font-weight="600" letter-spacing="3.4">CV ATS MAKER · AI MATCH SCORING</text>
+
+  <text x="93" y="308" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif"
+        font-size="112" font-weight="700" letter-spacing="-4">
+    <tspan fill="#F0EEE9">C</tspan><tspan fill="#6EC89C">-</tspan><tspan fill="#F0EEE9">VATS</tspan>
+  </text>
+
+  <text x="96" y="372" fill="#F0EEE9" fill-opacity="0.82"
+        font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="27" font-weight="400">
+    Your CV is read by software
+  </text>
+  <text x="96" y="410" fill="#6EC89C"
+        font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="27" font-weight="600">
+    before a person ever sees it.
+  </text>
+
+  <!-- Three honest facts, not invented social proof -->
+  <g font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" fill="#F0EEE9" fill-opacity="0.5">
+    <circle cx="100" cy="480" r="3.5" fill="#6EC89C" fill-opacity="1"/>
+    <text x="114" y="486">No account</text>
+    <circle cx="255" cy="480" r="3.5" fill="#6EC89C" fill-opacity="1"/>
+    <text x="269" y="486">Nothing stored</text>
+    <circle cx="447" cy="480" r="3.5" fill="#6EC89C" fill-opacity="1"/>
+    <text x="461" y="486">Free to use</text>
+  </g>
+
+  <!-- ── Right: the sheet being scored ────────────────────────────────── -->
+  <g transform="rotate(-3 891 332)">
+    <rect x="726" y="132" width="330" height="400" rx="8" fill="#FDFCF9" filter="url(#lift)"/>
+
+    <g clip-path="url(#sheetClip)">
+      <!-- header block -->
+      <rect x="758" y="172" width="150" height="13" rx="6.5" fill="#1C1B19"/>
+      <rect x="758" y="196" width="104" height="8" rx="4" fill="#1F6F4A"/>
+      <rect x="758" y="224" width="266" height="1" fill="#1C1B19" fill-opacity="0.14"/>
+
+      <!-- body lines, with the matched ones carrying the accent -->
+      <g fill="#1C1B19" fill-opacity="0.15">
+        <rect x="758" y="246" width="266" height="7" rx="3.5"/>
+        <rect x="758" y="262" width="228" height="7" rx="3.5"/>
+        <rect x="758" y="304" width="266" height="7" rx="3.5"/>
+        <rect x="758" y="320" width="196" height="7" rx="3.5"/>
+        <rect x="758" y="388" width="266" height="7" rx="3.5"/>
+        <rect x="758" y="404" width="240" height="7" rx="3.5"/>
+        <rect x="758" y="452" width="210" height="7" rx="3.5"/>
+      </g>
+
+      <!-- matched keyword pills -->
+      <g>
+        <rect x="756" y="278" width="128" height="18" rx="9" fill="#1F6F4A" fill-opacity="0.14"/>
+        <rect x="764" y="284" width="112" height="6" rx="3" fill="#1F6F4A"/>
+        <rect x="756" y="344" width="96" height="18" rx="9" fill="#1F6F4A" fill-opacity="0.14"/>
+        <rect x="764" y="350" width="80" height="6" rx="3" fill="#1F6F4A"/>
+        <rect x="862" y="344" width="118" height="18" rx="9" fill="#1F6F4A" fill-opacity="0.14"/>
+        <rect x="870" y="350" width="102" height="6" rx="3" fill="#1F6F4A"/>
+      </g>
+
+      <!-- section rule -->
+      <rect x="758" y="428" width="266" height="1" fill="#1C1B19" fill-opacity="0.14"/>
+    </g>
+
+    <!-- the score the product exists to produce -->
+    <g transform="translate(986 466)">
+      <circle r="46" fill="#FDFCF9"/>
+      <circle r="38" fill="none" stroke="#1C1B19" stroke-opacity="0.1" stroke-width="8"/>
+      <circle r="38" fill="none" stroke="#1F6F4A" stroke-width="8" stroke-linecap="round"
+              stroke-dasharray="238.8" stroke-dashoffset="28.7" transform="rotate(-90)"/>
+      <text y="2" text-anchor="middle" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif"
+            font-size="30" font-weight="700" fill="#1C1B19">88</text>
+      <text y="20" text-anchor="middle" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif"
+            font-size="11" font-weight="600" letter-spacing="1" fill="#1C1B19" fill-opacity="0.5">MATCH</text>
+    </g>
+  </g>
+</svg>
