@@ -207,7 +207,10 @@ const page = () => {
                                     className="md:border-l md:px-8 md:first:border-l-0 md:first:pl-0 md:last:pr-0"
                                     style={{ borderColor: 'var(--hairline)' }}
                                 >
-                                    <span className="font-mono text-xs font-semibold tabular-nums text-primary-400">
+                                    {/* The numeral anchors each column, so it is sized as a marker
+                                        rather than a caption — but stays under the 28px section
+                                        heading, since a step label outranking it inverts the order. */}
+                                    <span className="block font-mono text-2xl font-semibold leading-none tracking-[-0.04em] tabular-nums text-primary-400">
                                         {String(i + 1).padStart(2, '0')}
                                     </span>
                                     <h3 className="mt-4 text-lg font-semibold tracking-[-0.015em] text-ink">
