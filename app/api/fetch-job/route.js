@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit, clientIp, rateLimitedResponse } from '@/lib/rateLimit';
 
 export async function POST(req) {
     try {
+        // No AI cost here, but it's still an unauthenticated arbitrary-URL
+        // fetcher — worth capping so it can't be used as an open proxy.
+        const rl = checkRateLimit(`fetch-job:${clientIp(req)}`, { limit: 15, windowMs: 10 * 60 * 1000 });
+        if (!rl.allowed) return rateLimitedResponse(rl.retryAfterSeconds);
+
         const { url } = await req.json();
 
         if (!url || typeof url !== 'string') {

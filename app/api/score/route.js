@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { callAI, extractJson, hasAiProvider } from '@/lib/callAI';
+import { checkRateLimit, clientIp, rateLimitedResponse } from '@/lib/rateLimit';
 import {
   OPENROUTER_TEXT_MODELS,
   OPENROUTER_VISION_MODELS,
@@ -54,6 +55,11 @@ function normalizeRecommendations(raw) {
 
 export async function POST(req) {
   try {
+    // Also used by the Re-score button, which is a legitimate repeat call —
+    // limit is looser than one-shot routes like boost-cv or analyze-gaps.
+    const rl = checkRateLimit(`score:${clientIp(req)}`, { limit: 15, windowMs: 10 * 60 * 1000 });
+    if (!rl.allowed) return rateLimitedResponse(rl.retryAfterSeconds);
+
     const body = await req.json();
     const { cvText, jobText, jobImageBase64 } = body;
     // Allow caller to pass temperature=0 for deterministic comparison rescoring

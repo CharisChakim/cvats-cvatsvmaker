@@ -27,6 +27,10 @@ const ScoringPage = () => {
     const dispatch = useDispatch();
     const router = useRouter();
     const fileRef = useRef(null);
+    // Shared across the four AI-calling steps (score, boost, gap-analyze, apply-gap) —
+    // only one is ever in flight at a time, so one ref is enough.
+    const abortRef = useRef(null);
+    const cancelCurrentOperation = () => abortRef.current?.abort();
 
     // Steps: 1=select cv, 2=job input, 3=scoring loader, 4=results,
     //        5=boost loader (safe), 6=comparison,
@@ -101,6 +105,9 @@ const ScoringPage = () => {
             if (cached) { setResults(cached); setStep(4); return; }
         }
 
+        const controller = new AbortController();
+        abortRef.current = controller;
+
         setStep(3);
         try {
             const body = jobData.type === 'image'
@@ -110,6 +117,7 @@ const ScoringPage = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
+                signal: controller.signal,
             });
             const data = await res.json();
             if (!res.ok) {
@@ -120,16 +128,19 @@ const ScoringPage = () => {
             setResults(data);
             setStep(4);
         } catch (err) {
-            setError(err.message || t('scoring.scoreError'));
+            if (err.name !== 'AbortError') setError(err.message || t('scoring.scoreError'));
             setStep(2);
+        } finally {
+            abortRef.current = null;
         }
     };
 
-    const runBoostAndScore = async (mode, body) => {
+    const runBoostAndScore = async (mode, body, signal) => {
         const boostRes = await fetch('/api/boost-cv', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
+            signal,
         });
         const boostData = await boostRes.json();
         if (!boostRes.ok) throw new Error(boostData.error || 'Boost failed');
@@ -151,6 +162,7 @@ const ScoringPage = () => {
                     education: results.breakdown.education,
                 },
             }),
+            signal,
         });
         let scoreData = await scoreRes.json();
         if (!scoreRes.ok) throw new Error(scoreData.error || 'Scoring failed');
@@ -183,6 +195,9 @@ const ScoringPage = () => {
         setBoostedResults(null);
         setSelectedOption('boosted');
 
+        const controller = new AbortController();
+        abortRef.current = controller;
+
         if (mode === 'gap-advisor') {
             setGapAnalysis(null);
             setStep(7);
@@ -191,6 +206,7 @@ const ScoringPage = () => {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ cvText, jobText: jobData.value }),
+                    signal: controller.signal,
                 });
                 const data = await res.json();
                 if (!res.ok) {
@@ -200,23 +216,29 @@ const ScoringPage = () => {
                 setGapAnalysis(data);
                 setStep(8);
             } catch (err) {
-                setError(err.message || 'Failed to analyze gaps');
+                if (err.name !== 'AbortError') setError(err.message || 'Failed to analyze gaps');
                 setStep(4);
+            } finally {
+                abortRef.current = null;
             }
             return;
         }
 
         setStep(5);
         try {
-            await runBoostAndScore(mode, { cvText, jobText: jobData.value, mode });
+            await runBoostAndScore(mode, { cvText, jobText: jobData.value, mode }, controller.signal);
         } catch (err) {
-            setError(err.message || 'Failed to optimize CV');
+            if (err.name !== 'AbortError') setError(err.message || 'Failed to optimize CV');
             setStep(4);
+        } finally {
+            abortRef.current = null;
         }
     };
 
     const handleApplyGap = async ({ confirmedSkills, hiddenExperiences, confirmedKeywords, confirmedCerts }) => {
         setError('');
+        const controller = new AbortController();
+        abortRef.current = controller;
         setStep(9);
         try {
             await runBoostAndScore('gap-advisor', {
@@ -227,10 +249,12 @@ const ScoringPage = () => {
                 hiddenExperiences,
                 confirmedKeywords,
                 confirmedCerts,
-            });
+            }, controller.signal);
         } catch (err) {
-            setError(err.message || 'Failed to apply Gap Advisor');
+            if (err.name !== 'AbortError') setError(err.message || 'Failed to apply Gap Advisor');
             setStep(8);
+        } finally {
+            abortRef.current = null;
         }
     };
 
@@ -388,10 +412,10 @@ const ScoringPage = () => {
                         </div>
                     )}
 
-                    {step === 3 && <ScoringLoader t={t} />}
-                    {step === 5 && <BoostLoader t={t} mode={boostMode} />}
-                    {step === 7 && <GapAdvisorLoader t={t} />}
-                    {step === 9 && <BoostLoader t={t} mode="gap-advisor" />}
+                    {step === 3 && <ScoringLoader t={t} onCancel={cancelCurrentOperation} />}
+                    {step === 5 && <BoostLoader t={t} mode={boostMode} onCancel={cancelCurrentOperation} />}
+                    {step === 7 && <GapAdvisorLoader t={t} onCancel={cancelCurrentOperation} />}
+                    {step === 9 && <BoostLoader t={t} mode="gap-advisor" onCancel={cancelCurrentOperation} />}
                 </div>
             )}
 

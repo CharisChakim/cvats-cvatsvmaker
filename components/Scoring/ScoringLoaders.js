@@ -27,7 +27,17 @@ export const GAP_STEPS = [
     { icon: FaLightbulb,   key: 'scoring.gapStep5', delay: null  },
 ];
 
-export const GapAdvisorLoader = ({ t }) => (
+const CancelButton = ({ t, onCancel, className = '' }) =>
+    onCancel ? (
+        <button
+            onClick={onCancel}
+            className={`text-xs font-medium text-gray-400 underline-offset-2 transition-colors duration-150 hover:text-gray-600 hover:underline dark:hover:text-gray-300 ${className}`}
+        >
+            {t('scoring.cancel')}
+        </button>
+    ) : null;
+
+export const GapAdvisorLoader = ({ t, onCancel }) => (
     <div className="flex flex-col items-center justify-center py-14 gap-8 animate-fade-in">
         <div className="relative h-16 w-16 shrink-0">
             <div className="absolute inset-0 rounded-full border-4 border-amber-400/20" />
@@ -37,10 +47,11 @@ export const GapAdvisorLoader = ({ t }) => (
         <p className="text-base font-semibold tracking-wide">{t('scoring.gapAnalyzingTitle')}</p>
         <StepTimeline steps={GAP_STEPS} t={t}
             accentBg="bg-amber-400" accentRing="ring-amber-400/20" accentText="text-amber-600 dark:text-amber-400" />
+        <CancelButton t={t} onCancel={onCancel} />
     </div>
 );
 
-export const ScoringLoader = ({ t }) => (
+export const ScoringLoader = ({ t, onCancel }) => (
     <div className="flex flex-col items-center justify-center py-14 gap-8 animate-fade-in">
         <div className="relative h-16 w-16 shrink-0">
             <div className="absolute inset-0 rounded-full border-4 border-primary-400/20" />
@@ -50,10 +61,11 @@ export const ScoringLoader = ({ t }) => (
         <p className="text-base font-semibold tracking-wide">{t('scoring.scoring')}</p>
         <StepTimeline steps={SCORE_STEPS} t={t}
             accentBg="bg-primary-400" accentRing="ring-primary-400/20" accentText="text-primary-500 dark:text-primary-400" />
+        <CancelButton t={t} onCancel={onCancel} />
     </div>
 );
 
-export const BoostLoader = ({ t, mode }) => (
+export const BoostLoader = ({ t, mode, onCancel }) => (
     <div className="flex flex-col items-center justify-center py-14 gap-8 animate-fade-in">
         <div className="relative h-16 w-16 shrink-0">
             <div className="absolute inset-0 rounded-full border-4 border-violet-400/20" />
@@ -68,5 +80,6 @@ export const BoostLoader = ({ t, mode }) => (
         </div>
         <StepTimeline steps={BOOST_STEPS} t={t}
             accentBg="bg-violet-500" accentRing="ring-violet-400/20" accentText="text-violet-600 dark:text-violet-400" />
+        <CancelButton t={t} onCancel={onCancel} />
     </div>
 );

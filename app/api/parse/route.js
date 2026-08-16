@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 import { callAI, extractJson } from '@/lib/callAI';
+import { checkRateLimit, clientIp, rateLimitedResponse } from '@/lib/rateLimit';
 import { OPENROUTER_TEXT_MODELS, GROQ_TEXT_MODELS, GEMINI_MODELS } from '@/lib/aiModels';
 
 export async function POST(req) {
   try {
+    // The route this whole feature is about: uploading a resume PDF for AI
+    // extraction. Also reused by "Apply boost" in the scoring flow, so the
+    // limit needs to cover both without feeling tight for normal use.
+    const rl = checkRateLimit(`parse:${clientIp(req)}`, { limit: 8, windowMs: 10 * 60 * 1000 });
+    if (!rl.allowed) return rateLimitedResponse(rl.retryAfterSeconds);
+
     const { text } = await req.json();
 
     if (!text?.trim()) {

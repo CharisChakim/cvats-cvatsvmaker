@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { callAI, hasAiProvider } from '@/lib/callAI';
 import { OPENROUTER_TEXT_MODELS, GROQ_TEXT_MODELS, GEMINI_MODELS } from '@/lib/aiModels';
+import { checkRateLimit, clientIp, rateLimitedResponse } from '@/lib/rateLimit';
 
 const KIND_PROMPTS = {
   summary: `Rewrite this professional summary following this exact four-part structure:
@@ -36,6 +37,11 @@ Rules:
 
 export async function POST(req) {
   try {
+    // Called per field during editing, so this needs real headroom —
+    // someone refining every section a few times over shouldn't get blocked.
+    const rl = checkRateLimit(`refine:${clientIp(req)}`, { limit: 30, windowMs: 10 * 60 * 1000 });
+    if (!rl.allowed) return rateLimitedResponse(rl.retryAfterSeconds);
+
     const body = await req.json();
     const text = (body?.text || '').toString().trim();
     const kind = body?.kind;

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { callAI, extractJson, hasAiProvider } from '@/lib/callAI';
 import { OPENROUTER_TEXT_MODELS, GROQ_TEXT_MODELS, GEMINI_MODELS } from '@/lib/aiModels';
+import { checkRateLimit, clientIp, rateLimitedResponse } from '@/lib/rateLimit';
 
 const SYSTEM_PROMPT = `You are a resume-to-job-description gap analyst. Your ONLY job is to identify what the job description requires that is COMPLETELY ABSENT from the candidate's CV.
 
@@ -52,6 +53,9 @@ IMPORTANT:
 
 export async function POST(req) {
   try {
+    const rl = checkRateLimit(`analyze-gaps:${clientIp(req)}`, { limit: 8, windowMs: 10 * 60 * 1000 });
+    if (!rl.allowed) return rateLimitedResponse(rl.retryAfterSeconds);
+
     const body = await req.json();
     const cvText = (body?.cvText || '').toString().trim();
     const jobText = (body?.jobText || '').toString().trim();

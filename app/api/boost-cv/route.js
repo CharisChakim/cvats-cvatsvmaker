@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { callAI, hasAiProvider } from '@/lib/callAI';
 import { OPENROUTER_TEXT_MODELS, GROQ_TEXT_MODELS, GEMINI_MODELS } from '@/lib/aiModels';
+import { checkRateLimit, clientIp, rateLimitedResponse } from '@/lib/rateLimit';
 
 const PROMPT_SAFE = `You are an ATS optimization assistant. Your only task is to return the COMPLETE resume text with targeted wording improvements — nothing more.
 
@@ -53,6 +54,9 @@ function countSections(text) {
 
 export async function POST(req) {
   try {
+    const rl = checkRateLimit(`boost-cv:${clientIp(req)}`, { limit: 8, windowMs: 10 * 60 * 1000 });
+    if (!rl.allowed) return rateLimitedResponse(rl.retryAfterSeconds);
+
     const body = await req.json();
     const cvText = (body?.cvText || '').toString().trim();
     const jobText = (body?.jobText || '').toString().trim();

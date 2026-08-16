@@ -8,7 +8,7 @@ import useTranslation from '@/hooks/useTranslation';
 const STAGE_INDEX = { read: 0, parse: 1, editor: 2 };
 const STAGE_TARGETS = [25, 90, 100];
 
-const UploadProgress = ({ stage, fileName }) => {
+const UploadProgress = ({ stage, fileName, onCancel }) => {
     const t = useTranslation();
     const stageIdx = STAGE_INDEX[stage] ?? 0;
     const target = STAGE_TARGETS[stageIdx];
@@ -110,6 +110,17 @@ const UploadProgress = ({ stage, fileName }) => {
                     </ul>
 
                     <p className="mt-5 text-center text-[11px] text-gray-500">{t('upload.dontClose')}</p>
+
+                    {/* Hidden once parsing succeeds: 'editor' is just a local route
+                        push at that point, nothing in flight left to cancel. */}
+                    {onCancel && stage !== 'editor' && (
+                        <button
+                            onClick={onCancel}
+                            className="mt-4 w-full rounded-xl border border-white/10 py-2 text-xs font-medium text-gray-400 transition-colors duration-150 hover:bg-white/5 hover:text-gray-200"
+                        >
+                            {t('upload.cancel')}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

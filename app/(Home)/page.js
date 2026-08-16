@@ -63,6 +63,7 @@ const STEP_KEYS = ['stepScan', 'stepGaps', 'stepRewrite'];
 
 const page = () => {
     const fileInputRef = useRef(null);
+    const uploadAbortRef = useRef(null);
     const [loading, setLoading] = useState(false);
     const [stage, setStage] = useState('read');
     const [fileName, setFileName] = useState('');
@@ -84,12 +85,15 @@ const page = () => {
         if (!file) return;
         if (busy) return;
 
+        const controller = new AbortController();
+        uploadAbortRef.current = controller;
+
         setFileName(file.name);
         setStage('read');
         setUploadError('');
         setLoading(true);
         try {
-            const rawText = await extractTextFromPDF(file);
+            const rawText = await extractTextFromPDF(file, controller.signal);
             const text = cleanPdfText(rawText);
 
             if (!text || text.trim().length === 0) {
@@ -101,6 +105,7 @@ const page = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text }),
+                signal: controller.signal,
             });
 
             const data = await response.json();
@@ -113,17 +118,24 @@ const page = () => {
             dispatch(setFullResume(data));
             router.push('/editor');
         } catch (error) {
+            if (error.name === 'AbortError') {
+                setLoading(false);
+                return;
+            }
             console.error('Error uploading/parsing resume:', error);
             setUploadError(error.message);
             setLoading(false);
         } finally {
             if (fileInputRef.current) fileInputRef.current.value = '';
+            uploadAbortRef.current = null;
         }
     };
 
+    const cancelUpload = () => uploadAbortRef.current?.abort();
+
     return (
         <>
-            {loading && <UploadProgress stage={stage} fileName={fileName} />}
+            {loading && <UploadProgress stage={stage} fileName={fileName} onCancel={cancelUpload} />}
             {isRouting && <RouteOverlay label={t('hero.opening')} />}
 
             <main aria-hidden={busy} className={busy ? 'pointer-events-none select-none' : ''}>
