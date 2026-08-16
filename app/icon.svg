@@ -1,10 +1,8 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Tuned for 16-32px, the only range a favicon is actually seen at. The glyph
-       fills more of the tile and carries heavier strokes than the header mark:
-       at 16px the header's proportions collapse into an unreadable smudge.
-       Large renderings are the header Logo component's job, not this file's. -->
+  <!-- Favicons are only ever read at 16-32px. The full C-V monogram carries too
+       much detail for that: its counters close up and it renders as a smudge. So
+       the tab mark keeps just the V, at a weight that stays crisp at 16px. The
+       complete monogram lives in the header, where there is room for it. -->
   <rect width="64" height="64" rx="14" fill="#1F6F4A"/>
-  <path d="M47 16A22 22 0 1 0 47 48" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round"/>
-  <path d="M20 21 32.5 49 45 21" stroke="#1F6F4A" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M20 21 32.5 49 45 21" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M18 20 32 48 46 20" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

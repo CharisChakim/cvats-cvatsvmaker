@@ -195,10 +195,16 @@ const page = () => {
                             {t('hero.howTitle')}
                         </h2>
 
-                        <ol className="mt-10 grid gap-px overflow-hidden rounded-2xl md:grid-cols-3"
-                            style={{ backgroundColor: 'var(--hairline)' }}>
+                        {/* Columns are separated by rules rather than padded cards, so the
+                            step text shares its left edge with the heading above it. Card
+                            padding pushed it 28px out of alignment. */}
+                        <ol className="mt-10 grid gap-10 md:grid-cols-3 md:gap-0">
                             {STEP_KEYS.map((key, i) => (
-                                <li key={key} className="bg-paper p-6 md:p-7">
+                                <li
+                                    key={key}
+                                    className="md:border-l md:px-8 md:first:border-l-0 md:first:pl-0 md:last:pr-0"
+                                    style={{ borderColor: 'var(--hairline)' }}
+                                >
                                     <span className="font-mono text-xs font-semibold tabular-nums text-primary-400">
                                         {String(i + 1).padStart(2, '0')}
                                     </span>
